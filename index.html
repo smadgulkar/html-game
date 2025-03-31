@@ -9,29 +9,41 @@
 <body>
     <div id="game-wrapper">
         <div id="game-container">
+            <div class="danger-border"></div>
+            <div class="speed-lines"></div>
+            <div class="near-miss-flash"></div>
+            <div class="near-miss-particles"></div>
             <div id="stars-bg"></div>
             <div id="stars-mg"></div>
             <div id="stars-fg"></div>
             <div id="earth"></div>
             <div id="moon-surface"></div>
             <div id="landing-pad"></div>
+            <div id="landing-guides">
+                <div class="landing-guide approach-line"></div>
+                <div class="landing-guide ideal-angle-zone"></div>
+                <div class="landing-guide speed-markers"></div>
+                <div class="landing-guide distance-markers"></div>
+            </div>
 
             <div id="lander">
                  <svg id="lander-img" viewBox="0 0 100 150" xmlns="http://www.w3.org/2000/svg">
-                     <path d="M25 50 L40 20 L60 20 L75 50 L80 110 L20 110 Z" class="lander-main"/>
-                     <circle cx="50" cy="45" r="10" class="window" />
-                     <path d="M20 110 L10 140" class="legs leg-left" />
-                     <path d="M80 110 L90 140" class="legs leg-right" />
-                     <path d="M5 140 L15 140" class="legs foot-left"/>
-                     <path d="M85 140 L95 140" class="legs foot-right"/>
-                     <rect x="40" y="110" width="20" height="10" class="thruster-nozzle"/>
+                     <path d="M25 20 L50 10 L75 20 L85 80 L15 80 Z" class="lander-main"/>
+                     <circle cx="50" cy="35" r="10" class="window" />
+                     <path d="M25 80 L15 120" class="legs leg-left" />
+                     <path d="M75 80 L85 120" class="legs leg-right" />
+                     <path d="M10 120 L20 120" class="legs foot-left"/>
+                     <path d="M80 120 L90 120" class="legs foot-right"/>
+                     <rect x="40" y="75" width="20" height="10" class="thruster-nozzle"/>
 
                      <g id="damage-elements">
-                         <path d="M45 40 l5 8 l-6 2 l3 -7" class="damage-crack window-crack" />
-                         <path d="M51 46 l5 -3 l-1 6 l-3 -1" class="damage-crack window-crack" />
-                         <path d="M15 125 l-3 5 l4 -1 Z" class="damage-bent-leg leg-damage" />
+                         <path d="M45 30 l5 8 l-6 2 l3 -7" class="damage-crack window-crack" />
+                         <path d="M51 36 l5 -3 l-1 6 l-3 -1" class="damage-crack window-crack" />
+                         <path d="M20 100 l-3 5 l4 -1 Z" class="damage-bent-leg leg-damage" />
                      </g>
                  </svg>
+                <div class="thruster-glow"></div>
+                <div class="thruster-flame"></div>
             </div>
             <div id="dashboard">
                 <h3 id="dashboard-title">MISSION STATUS</h3>

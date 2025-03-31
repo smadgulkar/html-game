@@ -36,7 +36,31 @@ const CONFIG = {
     PRECISION_LOW_FUEL_THRESHOLD: 5, // Fuel level below this gets bonus
     PRECISION_LOW_FUEL_BONUS: 500,   // Bonus points for low fuel landing
     PRECISION_H_SPEED_THRESHOLD: 0.05,// Absolute horizontal speed below this gets bonus
-    PRECISION_H_SPEED_BONUS: 350    // Bonus points for still horizontal landing
+    PRECISION_H_SPEED_BONUS: 350,    // Bonus points for still horizontal landing
+    NEAR_MISS_THRESHOLD: 0.05, // How close to death (in m/s) counts as a near miss
+    NEAR_MISS_STREAK_MULTIPLIER: 1.5, // Score multiplier per streak
+    MAX_NEAR_MISS_STREAK: 5, // Maximum streak multiplier
+    NEAR_MISS_COOLDOWN: 2000, // Time in ms between near misses
+    ACHIEVEMENTS: {
+        PERFECT_LANDING: {
+            name: "Perfect Landing",
+            description: "Land with less than 0.1 m/s vertical speed",
+            threshold: 0.1,
+            bonus: 1000
+        },
+        FUEL_MASTER: {
+            name: "Fuel Master",
+            description: "Land with less than 5% fuel remaining",
+            threshold: 5,
+            bonus: 800
+        },
+        DEATH_DEFYING: {
+            name: "Death Defying",
+            description: "Survive 5 near misses in one landing",
+            threshold: 5,
+            bonus: 1500
+        }
+    }
 };
 
 // --- Difficulty Settings --- (Only 'impossible' used now)
@@ -80,7 +104,10 @@ let gameState = {
         currentPlanetData: PLANETS[0],
         difficulty: 'impossible',
         difficultySettings: DIFFICULTIES.impossible,
-        score: 0, highScores: [], lowFuelWarningPlayed: false
+        score: 0, highScores: [], lowFuelWarningPlayed: false,
+        nearMissStreak: 0,
+        lastNearMissTime: 0,
+        lastSpeedLineTime: 0
     },
     particles: [], obstacles: [], sounds: {}, audioContext: null
 };
@@ -386,6 +413,12 @@ function updatePhysics(deltaTime) {
         gameState.lander.x = gameState.game.width - gameState.lander.width / 2;
         gameState.lander.vx *= -0.2;
     }
+
+    // Add thruster effects update
+    updateThrusterEffects();
+
+    // Add visual effects update
+    updateDangerEffects();
 }
 
 function checkCollisions() {
@@ -450,6 +483,18 @@ function checkCollisions() {
             return; // Collision handled
         }
     }
+
+    // Add near-miss detection
+    if (!gameState.lander.crashed && !gameState.lander.landed) {
+        const distanceToPad = Math.abs(gameState.lander.y - gameState.game.pad.y);
+        const speed = Math.sqrt(gameState.lander.vx * gameState.lander.vx + gameState.lander.vy * gameState.lander.vy);
+        
+        if (distanceToPad < 100 && speed > CONFIG.MAX_LANDING_SPEED * 0.8) {
+            applyScreenShake();
+            gameState.game.nearMissStreak++;
+            // ... rest of near-miss handling ...
+        }
+    }
 }
 
 // --- UI Update ---
@@ -476,6 +521,7 @@ function gameLoop(timestamp) {
         updateParticles(gameState.game.deltaTime);
         updateParallax();
         updateUI();
+        updateLandingGuides(); // Add this line
     } catch (error) {
         console.error("Critical Error in Game Loop:", error);
         gameState.game.active = false; // Stop game on critical error
@@ -584,10 +630,50 @@ function endGame(success, message = "", impactData = null) { // Added impactData
              if(DOMElements.sillySuccessGraphic) DOMElements.sillySuccessGraphic.style.display = 'none';
          }
 
+         // Add streak bonus to score
+         const streakMultiplier = Math.min(
+             CONFIG.MAX_NEAR_MISS_STREAK,
+             1 + (gameState.game.nearMissStreak * CONFIG.NEAR_MISS_STREAK_MULTIPLIER)
+         );
+         levelScore = Math.round(levelScore * streakMultiplier);
+         
+         if (gameState.game.nearMissStreak > 0) {
+             awardedBonusMessage += ` Near Miss Streak x${gameState.game.nearMissStreak}!`;
+         }
+
+         // Check for achievements
+         const achievements = checkAchievements(impactData);
+         if (achievements.length > 0) {
+             // Add achievement bonuses
+             achievements.forEach(achievement => {
+                 levelScore += achievement.bonus;
+                 awardedBonusMessage += ` ${achievement.name} Bonus! (+${achievement.bonus})`;
+                 
+                 // Generate and show share button
+                 const shareBtn = document.createElement('button');
+                 shareBtn.className = 'share-achievement-btn';
+                 shareBtn.textContent = `Share ${achievement.name}`;
+                 shareBtn.onclick = () => {
+                     const imageUrl = generateShareableAchievement(achievement, gameState.game.score);
+                     // Create temporary link to download/share
+                     const link = document.createElement('a');
+                     link.download = `impossible-lander-${achievement.name.toLowerCase().replace(/\s+/g, '-')}.png`;
+                     link.href = imageUrl;
+                     link.click();
+                 };
+                 
+                 if (DOMElements.messageContainer) {
+                     DOMElements.messageContainer.appendChild(shareBtn);
+                 }
+             });
+         }
+
      } else { // Crash
          levelScore = 0;
          displayMessage = message || `Crashed on ${planetName}!`;
          if(DOMElements.sillySuccessGraphic) DOMElements.sillySuccessGraphic.style.display = 'none';
+         // Reset streak on crash
+         gameState.game.nearMissStreak = 0;
      }
 
      // Show message overlay (element from index.html)
@@ -783,7 +869,18 @@ function initGame() {
         controlsInfo: $('#controls-info'),         // Element from index.html
         planetProgression: $('#planet-progression'), // Element from index.html
         planetList: $('#planet-list'),               // Element from index.html
-        sillySuccessGraphic: $('#silly-success-graphic') // Img element from index.html
+        sillySuccessGraphic: $('#silly-success-graphic'), // Img element from index.html
+        dangerBorder: $('.danger-border'),
+        speedLines: $('.speed-lines'),
+        thrusterFlame: $('.thruster-flame'),
+        thrusterGlow: $('.thruster-glow'),
+        nearMissFlash: $('.near-miss-flash'),
+        nearMissParticles: $('.near-miss-particles'),
+        landingGuides: $('#landing-guides'),
+        approachLine: $('.approach-line'),
+        idealAngleZone: $('.ideal-angle-zone'),
+        speedMarkers: $('.speed-markers'),
+        distanceMarkers: $('.distance-markers'),
      };
 
     // Check if essential elements are loaded
@@ -847,4 +944,575 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initGame);
 } else {
     initGame(); // DOM already loaded
+}
+
+function checkNearMiss() {
+    if (gameState.lander.landed || gameState.lander.crashed) return;
+    
+    const now = Date.now();
+    if (now - gameState.game.lastNearMissTime < CONFIG.NEAR_MISS_COOLDOWN) return;
+    
+    const landerBottom = gameState.lander.y + gameState.lander.height / 2;
+    const surfaceY = gameState.game.surfaceY;
+    const vSpeed = Math.abs(gameState.lander.vy);
+    const hSpeed = Math.abs(gameState.lander.vx);
+    
+    // Check if we're dangerously close to the surface
+    if (Math.abs(landerBottom - surfaceY) < 10 && 
+        (vSpeed > gameState.game.difficultySettings.maxVSpeed * 0.8 || 
+         hSpeed > gameState.game.difficultySettings.maxHSpeed * 0.8)) {
+        
+        gameState.game.nearMissStreak++;
+        gameState.game.lastNearMissTime = now;
+        
+        // Trigger dramatic effects
+        triggerNearMissEffects();
+        
+        // Play dramatic sound
+        playSound('near_miss', false, 0.7);
+        
+        // Show streak message
+        showNearMissMessage();
+    }
+}
+
+function triggerNearMissEffects() {
+    // Flash effect
+    const flash = DOMElements.container.querySelector('.near-miss-flash');
+    if (flash) {
+        flash.classList.add('active');
+        setTimeout(() => flash.classList.remove('active'), 500);
+    }
+    
+    // Particle burst
+    createNearMissParticles();
+    
+    // Enhanced screen shake
+    applyScreenShake(1.5, true);
+    
+    // Dramatic text
+    showNearMissText();
+}
+
+function createNearMissParticles() {
+    const particlesContainer = DOMElements.container.querySelector('.near-miss-particles');
+    if (!particlesContainer) return;
+    
+    // Create 20 particles in a burst pattern
+    for (let i = 0; i < 20; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'near-miss-particle';
+        
+        // Random angle and distance for particle movement
+        const angle = (Math.PI * 2 * i) / 20 + (Math.random() - 0.5) * 0.5;
+        const distance = 50 + Math.random() * 50;
+        
+        // Set particle position and movement
+        particle.style.left = `${gameState.lander.x}px`;
+        particle.style.top = `${gameState.lander.y}px`;
+        particle.style.setProperty('--tx', `${Math.cos(angle) * distance}px`);
+        particle.style.setProperty('--ty', `${Math.sin(angle) * distance}px`);
+        
+        particlesContainer.appendChild(particle);
+        
+        // Remove particle after animation
+        setTimeout(() => particle.remove(), 500);
+    }
+}
+
+function showNearMissMessage() {
+    if (!DOMElements.messageOverlay) return;
+    
+    const messages = [
+        "CLOSE CALL!",
+        "ALMOST THERE!",
+        "THAT WAS CLOSE!",
+        "NARROW ESCAPE!",
+        "DEATH DEFYING!"
+    ];
+    
+    const streakMsg = document.createElement('div');
+    streakMsg.className = 'near-miss-text';
+    streakMsg.textContent = `${messages[Math.floor(Math.random() * messages.length)]} x${gameState.game.nearMissStreak}`;
+    DOMElements.messageOverlay.appendChild(streakMsg);
+    
+    setTimeout(() => streakMsg.remove(), 1000);
+}
+
+function showNearMissText() {
+    if (!DOMElements.messageOverlay) return;
+    
+    const text = document.createElement('div');
+    text.className = 'near-miss-text';
+    text.textContent = "NEAR MISS!";
+    DOMElements.messageOverlay.appendChild(text);
+    
+    setTimeout(() => text.remove(), 500);
+}
+
+function applyScreenShake(intensity = 1, isNearMiss = false) {
+    const container = DOMElements.container;
+    container.classList.add('screen-shake');
+    if (isNearMiss) {
+        container.classList.add('near-miss');
+    }
+    
+    setTimeout(() => {
+        container.classList.remove('screen-shake', 'near-miss');
+    }, 500);
+}
+
+function generateShareableAchievement(achievement, score) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1200;
+    canvas.height = 630;
+    const ctx = canvas.getContext('2d');
+    
+    // Draw achievement card
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Add achievement text
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 48px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(achievement.name, canvas.width/2, 200);
+    
+    ctx.font = '24px Arial';
+    ctx.fillText(achievement.description, canvas.width/2, 300);
+    
+    ctx.font = 'bold 36px Arial';
+    ctx.fillText(`Score: ${score}`, canvas.width/2, 400);
+    
+    // Add game title
+    ctx.font = 'bold 36px Arial';
+    ctx.fillText('IMPOSSIBLE LANDER', canvas.width/2, 500);
+    
+    return canvas.toDataURL('image/png');
+}
+
+function checkAchievements(impactData) {
+    const achievements = [];
+    
+    // Check perfect landing
+    if (Math.abs(impactData.impactVSpeed) < CONFIG.ACHIEVEMENTS.PERFECT_LANDING.threshold) {
+        achievements.push({
+            ...CONFIG.ACHIEVEMENTS.PERFECT_LANDING,
+            score: gameState.game.score
+        });
+    }
+    
+    // Check fuel master
+    if (gameState.lander.fuel < CONFIG.ACHIEVEMENTS.FUEL_MASTER.threshold) {
+        achievements.push({
+            ...CONFIG.ACHIEVEMENTS.FUEL_MASTER,
+            score: gameState.game.score
+        });
+    }
+    
+    // Check death defying
+    if (gameState.game.nearMissStreak >= CONFIG.ACHIEVEMENTS.DEATH_DEFYING.threshold) {
+        achievements.push({
+            ...CONFIG.ACHIEVEMENTS.DEATH_DEFYING,
+            score: gameState.game.score
+        });
+    }
+    
+    return achievements;
+}
+
+// Add new functions for visual effects
+function updateDangerEffects() {
+    if (!gameState.game.active || gameState.lander.landed || gameState.lander.crashed) return;
+    
+    const lander = gameState.lander;
+    const speed = Math.sqrt(lander.vx * lander.vx + lander.vy * lander.vy);
+    const maxVSpeed = gameState.game.difficultySettings.maxVSpeed;
+    const maxHSpeed = gameState.game.difficultySettings.maxHSpeed;
+    
+    // Update danger border
+    const dangerBorder = DOMElements.container.querySelector('.danger-border');
+    if (dangerBorder) {
+        if (speed > maxVSpeed * 0.8 || Math.abs(lander.vx) > maxHSpeed * 0.8) {
+            dangerBorder.classList.add('active');
+        } else {
+            dangerBorder.classList.remove('active');
+        }
+    }
+    
+    // Update speed lines - now with rate limiting
+    const speedLines = DOMElements.container.querySelector('.speed-lines');
+    if (speedLines) {
+        if (speed > maxVSpeed * 0.6 || Math.abs(lander.vx) > maxHSpeed * 0.6) {
+            speedLines.classList.add('active');
+            // Only create new lines periodically
+            if (!gameState.game.lastSpeedLineTime || 
+                Date.now() - gameState.game.lastSpeedLineTime > 100) { // 100ms between lines
+                createSpeedLine();
+                gameState.game.lastSpeedLineTime = Date.now();
+            }
+        } else {
+            speedLines.classList.remove('active');
+        }
+    }
+    
+    // Update landing pad color
+    const landingPad = DOMElements.container.querySelector('#landing-pad');
+    if (landingPad) {
+        const distanceToPad = Math.abs(lander.y - gameState.game.pad.y);
+        if (distanceToPad < 200) {
+            if (speed > maxVSpeed * 0.8 || Math.abs(lander.vx) > maxHSpeed * 0.8) {
+                landingPad.classList.add('danger');
+                landingPad.classList.remove('warning', 'safe');
+            } else if (speed > maxVSpeed * 0.6 || Math.abs(lander.vx) > maxHSpeed * 0.6) {
+                landingPad.classList.add('warning');
+                landingPad.classList.remove('danger', 'safe');
+            } else {
+                landingPad.classList.add('safe');
+                landingPad.classList.remove('danger', 'warning');
+            }
+        } else {
+            landingPad.classList.remove('danger', 'warning', 'safe');
+        }
+    }
+}
+
+function createSpeedLine() {
+    const speedLines = DOMElements.container.querySelector('.speed-lines');
+    if (!speedLines || !gameState.game.active) return;
+    
+    // Limit the number of speed lines that can exist at once
+    const existingLines = speedLines.querySelectorAll('.speed-line').length;
+    if (existingLines >= 8) return; // Maximum of 8 lines at once
+    
+    const speedLine = document.createElement('div');
+    speedLine.className = 'speed-line';
+    speedLine.style.left = Math.random() * 100 + '%';
+    speedLines.appendChild(speedLine);
+    
+    // Remove the speed line after animation
+    setTimeout(() => {
+        if (speedLine && speedLine.parentNode) {
+            speedLine.remove();
+        }
+    }, 800);
+}
+
+function updateThrusterEffects() {
+    if (!gameState.game.active || !DOMElements.lander) return;
+    
+    const thrusterFlame = DOMElements.lander.querySelector('.thruster-flame');
+    const thrusterGlow = DOMElements.lander.querySelector('.thruster-glow');
+    
+    if (!thrusterFlame || !thrusterGlow) return;
+    
+    const isThrusting = gameState.controls.thrust && gameState.lander.fuel > 0 && !gameState.lander.thrusterMalfunctioning;
+    const fuelPercentage = (gameState.lander.fuel / CONFIG.INITIAL_FUEL) * 100;
+    
+    // Update flame and glow visibility
+    thrusterFlame.classList.toggle('active', isThrusting);
+    thrusterGlow.classList.toggle('active', isThrusting);
+    
+    // Update fuel state classes
+    thrusterFlame.classList.toggle('low-fuel', fuelPercentage < 30);
+    thrusterFlame.classList.toggle('critical', fuelPercentage < 10);
+    thrusterGlow.classList.toggle('low-fuel', fuelPercentage < 30);
+    thrusterGlow.classList.toggle('critical', fuelPercentage < 10);
+    
+    // Update flame size based on thrust intensity
+    if (isThrusting) {
+        const thrustIntensity = 1 + (Math.random() * 0.3); // Random variation
+        thrusterFlame.style.transform = `translateX(-50%) scaleY(${thrustIntensity})`;
+        thrusterGlow.style.transform = `translateX(-50%) scaleY(${thrustIntensity * 1.2})`;
+    } else {
+        thrusterFlame.style.transform = 'translateX(-50%)';
+        thrusterGlow.style.transform = 'translateX(-50%)';
+    }
+}
+
+function updateLandingGuides() {
+    if (!gameState.game.active || gameState.lander.landed || gameState.lander.crashed) return;
+    
+    const lander = gameState.lander;
+    const pad = gameState.game.pad;
+    const maxVSpeed = gameState.game.difficultySettings.maxVSpeed;
+    const maxHSpeed = gameState.game.difficultySettings.maxHSpeed;
+    
+    // Update approach line
+    const approachLine = DOMElements.container.querySelector('.approach-line');
+    if (approachLine) {
+        const dx = pad.x - lander.x;
+        const dy = pad.y - lander.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const angle = Math.atan2(dx, dy) * 180 / Math.PI;
+        
+        approachLine.style.left = `${lander.x}px`;
+        approachLine.style.top = `${lander.y}px`;
+        approachLine.style.height = `${distance}px`;
+        approachLine.style.transform = `rotate(${angle}deg)`;
+        approachLine.classList.toggle('active', distance < 300);
+    }
+    
+    // Update ideal angle zone
+    const idealAngleZone = DOMElements.container.querySelector('.ideal-angle-zone');
+    if (idealAngleZone) {
+        const idealAngle = 0; // Perfect vertical landing
+        const angleRange = 5; // ±5 degrees
+        const currentAngle = lander.angle % 360;
+        const angleDiff = Math.abs(currentAngle - idealAngle);
+        
+        idealAngleZone.style.left = `${lander.x}px`;
+        idealAngleZone.style.top = `${lander.y}px`;
+        idealAngleZone.style.height = '200px';
+        idealAngleZone.style.transform = `rotate(${idealAngle}deg)`;
+        idealAngleZone.classList.toggle('active', angleDiff <= angleRange);
+    }
+    
+    // Update speed markers
+    const speedMarkers = DOMElements.container.querySelector('.speed-markers');
+    if (speedMarkers) {
+        // Clear existing markers
+        speedMarkers.innerHTML = '';
+        
+        // Create markers for current speed vs max safe speed
+        const currentSpeed = Math.sqrt(lander.vx * lander.vx + lander.vy * lander.vy);
+        const speedRatio = currentSpeed / maxVSpeed;
+        
+        // Add marker for current speed
+        const currentMarker = document.createElement('div');
+        currentMarker.className = 'speed-marker';
+        currentMarker.style.left = `${lander.x}px`;
+        currentMarker.style.top = `${lander.y + 100}px`;
+        currentMarker.style.backgroundColor = speedRatio > 0.8 ? 'rgba(255, 0, 0, 0.8)' : 
+                                            speedRatio > 0.5 ? 'rgba(255, 255, 0, 0.8)' : 
+                                            'rgba(0, 255, 0, 0.8)';
+        speedMarkers.appendChild(currentMarker);
+        
+        // Add text showing speed ratio
+        const speedText = document.createElement('div');
+        speedText.className = 'landing-zone-text';
+        speedText.textContent = `${(speedRatio * 100).toFixed(0)}%`;
+        speedText.style.left = `${lander.x + 10}px`;
+        speedText.style.top = `${lander.y + 95}px`;
+        speedMarkers.appendChild(speedText);
+    }
+    
+    // Update distance markers
+    const distanceMarkers = DOMElements.container.querySelector('.distance-markers');
+    if (distanceMarkers) {
+        // Clear existing markers
+        distanceMarkers.innerHTML = '';
+        
+        // Create markers at fixed distances
+        const distances = [100, 200, 300];
+        distances.forEach(dist => {
+            const marker = document.createElement('div');
+            marker.className = 'distance-marker';
+            marker.style.left = `${lander.x}px`;
+            marker.style.top = `${lander.y + dist}px`;
+            distanceMarkers.appendChild(marker);
+            
+            // Add distance text
+            const distText = document.createElement('div');
+            distText.className = 'landing-zone-text';
+            distText.textContent = `${dist}m`;
+            distText.style.left = `${lander.x + 10}px`;
+            distText.style.top = `${lander.y + dist - 5}px`;
+            distanceMarkers.appendChild(distText);
+        });
+    }
+}
+
+function createDustTrail() {
+    if (!gameState.game.active || gameState.lander.landed || gameState.lander.crashed) return;
+    
+    const lander = gameState.lander;
+    const speed = Math.sqrt(lander.vx * lander.vx + lander.vy * lander.vy);
+    
+    // Only create dust trail when moving fast enough
+    if (speed > 2) {
+        const dust = document.createElement('div');
+        dust.className = 'dust-trail';
+        dust.style.left = `${lander.x}px`;
+        dust.style.top = `${lander.y}px`;
+        DOMElements.container.appendChild(dust);
+        
+        // Remove dust particle after animation
+        setTimeout(() => dust.remove(), 1000);
+    }
+}
+
+function createWindGust() {
+    if (!gameState.game.active || gameState.lander.landed || gameState.lander.crashed) return;
+    
+    const wind = document.createElement('div');
+    wind.className = 'wind-gust';
+    wind.style.top = `${Math.random() * 100}%`;
+    DOMElements.container.appendChild(wind);
+    
+    // Remove wind gust after animation
+    setTimeout(() => wind.remove(), 1000);
+}
+
+function createGroundImpact(x, y, intensity = 1) {
+    const impact = document.createElement('div');
+    impact.className = 'ground-impact';
+    impact.style.left = `${x}px`;
+    impact.style.top = `${y}px`;
+    impact.style.transform = `scale(${intensity})`;
+    DOMElements.container.appendChild(impact);
+    
+    // Create dust particles around impact
+    for (let i = 0; i < 5; i++) {
+        const dust = document.createElement('div');
+        dust.className = 'dust-particle';
+        const angle = (Math.PI * 2 * i) / 5;
+        const distance = 10;
+        dust.style.left = `${x + Math.cos(angle) * distance}px`;
+        dust.style.top = `${y + Math.sin(angle) * distance}px`;
+        DOMElements.container.appendChild(dust);
+        
+        // Remove dust particle after animation
+        setTimeout(() => dust.remove(), 1000);
+    }
+    
+    // Remove impact effect after animation
+    setTimeout(() => impact.remove(), 500);
+}
+
+function createCraterEffect(x, y, size = 1) {
+    const crater = document.createElement('div');
+    crater.className = 'crater-effect';
+    crater.style.left = `${x}px`;
+    crater.style.top = `${y}px`;
+    crater.style.transform = `scale(${size})`;
+    DOMElements.container.appendChild(crater);
+    
+    // Create more dust particles for crater
+    for (let i = 0; i < 8; i++) {
+        const dust = document.createElement('div');
+        dust.className = 'dust-particle';
+        const angle = (Math.PI * 2 * i) / 8;
+        const distance = 15;
+        dust.style.left = `${x + Math.cos(angle) * distance}px`;
+        dust.style.top = `${y + Math.sin(angle) * distance}px`;
+        DOMElements.container.appendChild(dust);
+        
+        // Remove dust particle after animation
+        setTimeout(() => dust.remove(), 1000);
+    }
+    
+    // Remove crater effect after animation
+    setTimeout(() => crater.remove(), 800);
+}
+
+// Update the gameLoop function to include environmental effects
+function gameLoop(timestamp) {
+    if (!gameState.game.active) return;
+    if(gameState.game.paused) {
+        gameLoopHandle = requestAnimationFrame(gameLoop);
+        return;
+    }
+    if (!gameState.game.startTime) gameState.game.startTime = timestamp;
+    if (!gameState.game.lastFrameTime) gameState.game.lastFrameTime = timestamp;
+    gameState.game.deltaTime = Math.max(1, timestamp - gameState.game.lastFrameTime);
+    gameState.game.lastFrameTime = timestamp;
+
+    try {
+        updatePhysics(gameState.game.deltaTime);
+        checkCollisions();
+        updateParticles(gameState.game.deltaTime);
+        updateParallax();
+        updateUI();
+        updateLandingGuides();
+        createDustTrail(); // Add dust trail
+        if (Math.random() < 0.01) createWindGust(); // Random wind gusts
+    } catch (error) {
+        console.error("Critical Error in Game Loop:", error);
+        gameState.game.active = false;
+        alert("A critical game error occurred. Please check the console.");
+        endGame(false, "Critical game error!");
+        return;
+    }
+
+    if (gameState.game.active) {
+        gameLoopHandle = requestAnimationFrame(gameLoop);
+    }
+}
+
+// Update the checkCollisions function to include impact effects
+function checkCollisions() {
+    if (gameState.lander.landed || gameState.lander.crashed) return;
+
+    // Simplified lander bounds calculation (could be more precise using rotated corners)
+    const angleRad=degToRad(gameState.lander.angle), cosA=Math.cos(angleRad), sinA=Math.sin(angleRad), halfW=gameState.lander.width/2, halfH=gameState.lander.height/2; const corners=[{x:-halfW,y:halfH},{x:halfW,y:halfH},{x:-halfW,y:-halfH},{x:halfW,y:-halfH}]; const worldCorners=corners.map(c=>({x:gameState.lander.x+(c.x*cosA-c.y*sinA),y:gameState.lander.y+(c.x*sinA+c.y*cosA)})); const landerBottomY=Math.max(...worldCorners.map(c=>c.y)), landerTopY=Math.min(...worldCorners.map(c=>c.y)), landerLeftX=Math.min(...worldCorners.map(c=>c.x)), landerRightX=Math.max(...worldCorners.map(c=>c.x));
+
+    const impactVSpeed = gameState.lander.vy;
+    const impactHSpeed = gameState.lander.vx;
+    let impactAngle = gameState.lander.angle % 360; if(impactAngle>180)impactAngle-=360; if(impactAngle<-180)impactAngle+=360; const impactRotation = Math.abs(impactAngle);
+
+    // Surface collision
+    if(landerBottomY >= gameState.game.surfaceY){
+        gameState.lander.y -= (landerBottomY - gameState.game.surfaceY); // Correct position
+
+        const padLeft=gameState.game.pad.x-gameState.game.pad.width/2, padRight=gameState.game.pad.x+gameState.game.pad.width/2;
+        const overlapsPadHorizontally=landerRightX > padLeft && landerLeftX < padRight;
+
+        const maxV = gameState.game.difficultySettings.maxVSpeed;
+        const maxH = gameState.game.difficultySettings.maxHSpeed;
+        const maxRot = CONFIG.MAX_LANDING_ROTATION;
+
+        // Check landing conditions
+        if(overlapsPadHorizontally && impactVSpeed <= maxV && Math.abs(impactHSpeed) <= maxH && impactRotation <= maxRot){
+            gameState.lander.landed = true;
+            gameState.lander.vy = 0; gameState.lander.vx = 0; gameState.lander.angle = 0; // Stabilize
+            gameState.lander.y = gameState.game.surfaceY - gameState.lander.height / 2; // Set final position
+            createDust(gameState.lander.x, gameState.game.surfaceY); // Visual effect
+            // Landing sounds
+            if(impactVSpeed < maxV * 0.5 && gameState.sounds['land_soft']) playSound('land_soft',false,0.7); else if(gameState.sounds['land_hard']) playSound('land_hard',false,0.7); else if(gameState.sounds['land_soft']) playSound('land_soft',false,0.7);
+            playSound('success',false,0.8);
+            endGame(true, "", { impactVSpeed, impactHSpeed, impactRotation }); // Pass impact data for scoring
+        } else {
+            // Crash
+            gameState.lander.crashed = true;
+            createExplosion(gameState.lander.x, gameState.game.surfaceY);
+            DOMElements.lander?.style.setProperty('display','none'); // Hide lander element from index.html
+            let reason = "Crashed!";
+            if (!overlapsPadHorizontally) reason = "Missed the pad!";
+            else if (impactVSpeed > maxV) reason = `Too fast vertically! (${(impactVSpeed * CONFIG.SPEED_DISPLAY_FACTOR).toFixed(1)} > ${(maxV*CONFIG.SPEED_DISPLAY_FACTOR).toFixed(1)} m/s)`;
+            else if (Math.abs(impactHSpeed) > maxH) reason = `Too fast horizontally! (${(Math.abs(impactHSpeed)*CONFIG.SPEED_DISPLAY_FACTOR).toFixed(1)} > ${(maxH*CONFIG.SPEED_DISPLAY_FACTOR).toFixed(1)} m/s)`;
+            else if (impactRotation > maxRot) reason = `Tilted too much! (${impactRotation.toFixed(0)} > ${maxRot} deg)`;
+            else reason = "Bad landing!";
+            endGame(false, reason);
+        }
+        return; // Collision handled
+    }
+
+    // Obstacle collision
+    const landerRect={left:landerLeftX,right:landerRightX,top:landerTopY,bottom:landerBottomY};
+    for(const obs of gameState.obstacles){
+        const obsRect={left:obs.x,right:obs.x+obs.width,top:obs.y,bottom:obs.y+obs.height};
+        // Basic AABB collision check
+        if(landerRect.right > obsRect.left && landerRect.left < obsRect.right &&
+           landerRect.bottom > obsRect.top && landerRect.top < obsRect.bottom)
+        {
+            gameState.lander.crashed = true;
+            createExplosion((landerRect.left + landerRect.right)/2, (landerRect.top + landerRect.bottom)/2);
+            DOMElements.lander?.style.setProperty('display','none'); // Hide lander
+            endGame(false,"Collided with an obstacle!");
+            return; // Collision handled
+        }
+    }
+
+    // Add near-miss detection
+    if (!gameState.lander.crashed && !gameState.lander.landed) {
+        const distanceToPad = Math.abs(gameState.lander.y - gameState.game.pad.y);
+        const speed = Math.sqrt(gameState.lander.vx * gameState.lander.vx + gameState.lander.vy * gameState.lander.vy);
+        
+        if (distanceToPad < 100 && speed > CONFIG.MAX_LANDING_SPEED * 0.8) {
+            applyScreenShake();
+            gameState.game.nearMissStreak++;
+            // ... rest of near-miss handling ...
+        }
+    }
 }
