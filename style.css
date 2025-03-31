@@ -1,0 +1,338 @@
+:root {
+    /* Base Colors */
+    --lander-color: #ddd;
+    --lander-stroke: #999;
+    --thrust-color-start: #ffaa00;
+    --thrust-color-end: #ff5500;
+    --explosion-color-start: #ffdd00;
+    --explosion-color-end: #ff3300;
+    --dust-color: #aaa;
+    --text-color: #fff;
+    --bg-color: #000; /* Fallback bg */
+    --dashboard-bg: rgba(0, 0, 0, 0.7);
+    --dashboard-border: #555;
+    --dashboard-shadow: rgba(100, 100, 255, 0.5);
+    --info-color: #3498db;
+    --good-color: #55ff55;
+    --warning-color: #ffaa00;
+    --critical-color: #ff5555;
+    --damage-color: #ffcc00; /* Color for cracks/bends */
+
+    /* Planet Theme Variables (Defaults to Moon) */
+    --sky-gradient: linear-gradient(to bottom, #000000, #0a0a2a, #1a1a3a);
+    --surface-gradient: linear-gradient(to bottom, #222, #555);
+    --surface-border-color: #666;
+    --pad-bg-color: #aaa;
+    --pad-light-color: #ff0;
+    --crater-inner-color: #444;
+    --crater-outer-color: #222;
+    --crater-border-color: #666;
+    --obstacle-bg-color: #777;
+    --obstacle-border-color: #444;
+    --earth-display: block; /* Default for Moon */
+    --earth-bg: radial-gradient(circle at 30% 30%, #7ebbff, #0055aa); /* Default Earth */
+}
+
+body {
+    margin: 0;
+    overflow: hidden;
+    font-family: 'Arial', sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+#game-wrapper {
+     position: relative;
+     width: 100%;
+     height: 100%;
+     max-width: 1000px; /* Limit max width */
+     max-height: 800px; /* Limit max height */
+     overflow: hidden;
+     border: 1px solid var(--dashboard-border);
+}
+
+#game-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: var(--sky-gradient); /* Use variable */
+    overflow: hidden;
+}
+
+#stars-bg, #stars-mg, #stars-fg {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    will-change: transform; /* Performance hint for parallax */
+}
+
+.star {
+    position: absolute;
+    background-color: var(--text-color);
+    border-radius: 50%;
+    animation: twinkle 3s infinite alternate;
+}
+
+@keyframes twinkle {
+    0% { opacity: 0.3; }
+    100% { opacity: 1; }
+}
+
+#earth { /* Can represent other distant objects */
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    top: 30px;
+    right: 50px;
+    background: var(--earth-bg); /* Use variable */
+    box-shadow: 0 0 20px rgba(0, 100, 255, 0.5);
+    display: var(--earth-display); /* Use variable */
+}
+
+#moon-surface { /* Renamed conceptually to 'surface' */
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 25%;
+    background: var(--surface-gradient); /* Use variable */
+    border-top: 2px solid var(--surface-border-color); /* Use variable */
+    z-index: 5;
+}
+
+.crater {
+    position: absolute;
+    background: radial-gradient(circle at center, var(--crater-inner-color), var(--crater-outer-color)); /* Use variable */
+    border-radius: 50%;
+    border: 1px solid var(--crater-border-color); /* Use variable */
+}
+
+.obstacle {
+     position: absolute;
+     width: 30px; /* Base width, can be adjusted by JS */
+     height: 20px; /* Base height */
+     background-color: var(--obstacle-bg-color); /* Use variable */
+     border: 1px solid var(--obstacle-border-color); /* Use variable */
+     border-radius: 30% 70% 50% 40% / 50% 40% 60% 30%; /* Irregular shape */
+     transform: rotate(var(--obstacle-rotation, 0deg)); /* Rotation set by JS */
+     z-index: 6;
+}
+
+#lander {
+    position: absolute;
+    width: 35px;
+    height: 50px;
+    transform-origin: center center;
+    z-index: 10;
+    will-change: transform, top, left;
+}
+
+#lander-img {
+    width: 100%;
+    height: 100%;
+    fill: var(--lander-color);
+    stroke: var(--lander-stroke);
+    stroke-width: 1.5;
+}
+ #lander-img .window { fill: #7ebbff; stroke: #444; stroke-width: 1; }
+ #lander-img .legs { stroke: #aaa; stroke-width: 2; }
+ #lander-img .thruster-nozzle { fill: #888; }
+
+/* Added Damage Styles */
+#damage-elements {
+    display: none; /* Hide damage group by default */
+}
+.damage-crack {
+    stroke: var(--damage-color);
+    stroke-width: 0.8;
+    fill: none;
+}
+.damage-bent-leg {
+     fill: var(--damage-color);
+     stroke: #a89000; /* Darker border for bent part */
+     stroke-width: 0.5;
+}
+/* Show damage when parent group has 'damaged' class */
+#damage-elements.damaged {
+    display: block;
+}
+
+
+.particle {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9;
+    will-change: transform, opacity;
+}
+
+#landing-pad {
+    position: absolute;
+    bottom: 25%; /* On top of the surface */
+    width: 80px; /* Base width, adjusted by JS */
+    height: 8px;
+    background-color: var(--pad-bg-color); /* Use variable */
+    /* left set by JS */
+    transform: translateX(-50%);
+    border-radius: 2px;
+    z-index: 6;
+}
+
+#landing-pad::before, #landing-pad::after {
+    content: '';
+    position: absolute;
+    top: -6px;
+    width: 4px;
+    height: 6px;
+    background-color: var(--pad-light-color); /* Use variable */
+    animation: blink 1.5s infinite;
+}
+#landing-pad::before { left: 5px; }
+#landing-pad::after { right: 5px; }
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.2; }
+}
+
+#dashboard {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background-color: var(--dashboard-bg);
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid var(--dashboard-border);
+    box-shadow: 0 0 10px var(--dashboard-shadow);
+    z-index: 20;
+    font-size: 12px;
+}
+#dashboard h3 { margin: 0 0 8px 0; color: var(--info-color); font-size: 14px; text-shadow: 0 0 3px var(--info-color);}
+.dashboard-item { margin-bottom: 5px; display: flex; align-items: center; justify-content: space-between;}
+.dashboard-label { color: #bbb; margin-right: 5px; }
+.dashboard-value { font-weight: bold; font-family: 'Courier New', monospace; font-size: 14px; min-width: 65px; text-align: right; }
+#fuel-bar { flex-grow: 1; height: 6px; background-color: #333; border-radius: 3px; overflow: hidden; margin-left: 5px;}
+#fuel-level { height: 100%; background: linear-gradient(to right, var(--critical-color), var(--warning-color), var(--good-color)); border-radius: 3px; transition: width 0.2s linear; }
+.good { color: var(--good-color); }
+.warning { color: var(--warning-color); }
+.critical { color: var(--critical-color); }
+
+#controls-info {
+     position: absolute;
+     bottom: 10px;
+     left: 10px;
+     font-size: 11px;
+     color: #888;
+     z-index: 20;
+}
+#controls-info span { display: inline-block; border: 1px solid #555; padding: 1px 4px; border-radius: 3px; margin: 0 2px; background-color: rgba(0,0,0,0.3); }
+
+#message-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 50;
+    display: none;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+#message-container {
+    background-color: var(--dashboard-bg);
+    padding: 25px 30px;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 0 0 20px var(--dashboard-shadow);
+    border: 1px solid var(--dashboard-border);
+    max-width: 90%;
+}
+
+#message-title { font-size: 24px; margin-bottom: 15px; font-weight: bold; }
+#message-text { font-size: 14px; margin-bottom: 20px; line-height: 1.5; }
+#message-score { font-size: 16px; margin-bottom: 10px; font-weight: bold; }
+#message-highscore { font-size: 14px; margin-bottom: 15px; color: var(--warning-color);}
+
+#silly-success-graphic {
+    display: none;
+    width: 120px;
+    height: auto;
+    margin: 15px auto 15px;
+    animation: successPop 0.5s ease-out forwards;
+}
+
+@keyframes successPop {
+    0% { transform: scale(0.5); opacity: 0; }
+    70% { transform: scale(1.1); opacity: 1; }
+    100% { transform: scale(1.0); opacity: 1; }
+}
+
+.btn {
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: var(--info-color);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin: 5px;
+    box-shadow: 0 0 10px rgba(52, 152, 219, 0.5);
+}
+.btn:hover { background-color: #2980b9; box-shadow: 0 0 15px rgba(52, 152, 219, 0.8); }
+.btn:active { transform: scale(0.95); }
+
+ #ad-placeholder-bottom {
+    position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 320px; height: 50px; background-color: #333; color: #888;
+    display: flex; justify-content: center; align-items: center;
+    font-size: 12px; z-index: 100; border-top: 1px solid #555; display: none;
+}
+
+#start-screen {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background-color: rgba(0,0,0,0.9); z-index: 60;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    color: white; text-align: center; padding: 20px; box-sizing: border-box;
+}
+#start-screen h1 { font-size: 36px; color: var(--critical-color); margin-bottom: 20px; }
+#start-screen p { margin-bottom: 30px; max-width: 500px; line-height: 1.6; }
+
+#highscore-display {
+    position: absolute; top: 10px; right: 10px; background-color: var(--dashboard-bg);
+    padding: 10px; border-radius: 5px; border: 1px solid var(--dashboard-border);
+    box-shadow: 0 0 10px var(--dashboard-shadow); z-index: 20; font-size: 12px; max-width: 180px;
+}
+ #highscore-display h3 { margin: 0 0 8px 0; color: var(--warning-color); font-size: 14px; }
+ #highscore-display ol { padding-left: 20px; margin: 0; font-size: 12px; font-family: 'Courier New', monospace;}
+ #highscore-display li { margin-bottom: 3px; }
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+    20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+.shake-effect { animation: shake 0.5s; }
+
+#planet-progression {
+    margin-top: 20px; margin-bottom: 20px; padding: 10px;
+    background-color: rgba(255, 255, 255, 0.1); border-radius: 5px;
+    width: 80%; max-width: 400px;
+}
+#planet-progression h3 { margin: 0 0 10px 0; font-size: 16px; color: var(--info-color); }
+#planet-list { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.planet-status {
+    padding: 5px 10px; border-radius: 15px; font-size: 12px;
+    border: 1px solid transparent; background-color: #555; color: #999;
+}
+.planet-status.unlocked { background-color: var(--info-color); color: white; border-color: #fff; }
+.planet-status.current { box-shadow: 0 0 8px var(--good-color); border-color: var(--good-color); }
