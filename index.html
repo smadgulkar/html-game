@@ -2,695 +2,126 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lunar Landing Simulator</title>
-    <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            font-family: 'Arial', sans-serif;
-            background-color: #000;
-            color: #fff;
-        }
-        
-        #game-container {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-            background: linear-gradient(to bottom, #000000, #0a0a2a, #1a1a3a);
-            overflow: hidden;
-        }
-        
-        #stars {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-        }
-        
-        .star {
-            position: absolute;
-            background-color: #fff;
-            border-radius: 50%;
-            animation: twinkle 3s infinite alternate;
-        }
-        
-        @keyframes twinkle {
-            0% { opacity: 0.3; }
-            100% { opacity: 1; }
-        }
-        
-        #earth {
-            position: absolute;
-            width: 150px;
-            height: 150px;
-            border-radius: 50%;
-            top: 50px;
-            right: 100px;
-            background: radial-gradient(circle at 30% 30%, #7ebbff, #0055aa);
-            box-shadow: 0 0 20px rgba(0, 100, 255, 0.5);
-            animation: rotate 120s linear infinite;
-        }
-        
-        @keyframes rotate {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        #moon-surface {
-            position: absolute;
-            bottom: 0;
-            width: 100%;
-            height: 30%;
-            background: linear-gradient(to bottom, #222222, #555555);
-            border-top: 2px solid #666;
-        }
-        
-        .crater {
-            position: absolute;
-            background: radial-gradient(circle at center, #444, #222);
-            border-radius: 50%;
-            border: 1px solid #666;
-        }
-        
-        #lander {
-            position: absolute;
-            width: 40px;
-            height: 60px;
-            left: 50%;
-            transition: transform 0.5s;
-        }
-        
-        #lander-img {
-            width: 100%;
-            height: 100%;
-        }
-        
-        .thrust {
-            position: absolute;
-            bottom: -15px;
-            left: 15px;
-            width: 10px;
-            height: 20px;
-            background: linear-gradient(to bottom, #ff5500, #ffaa00);
-            border-radius: 50% 50% 0 0;
-            opacity: 0;
-            transform-origin: center bottom;
-        }
-        
-        #landing-pad {
-            position: absolute;
-            bottom: 30%;
-            width: 100px;
-            height: 10px;
-            background-color: #aaa;
-            left: 50%;
-            transform: translateX(-50%);
-            border-radius: 3px;
-        }
-        
-        #landing-pad::before, #landing-pad::after {
-            content: '';
-            position: absolute;
-            top: -10px;
-            width: 5px;
-            height: 10px;
-            background-color: #ff0;
-        }
-        
-        #landing-pad::before {
-            left: 0;
-        }
-        
-        #landing-pad::after {
-            right: 0;
-        }
-        
-        #dashboard {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            background-color: rgba(0, 0, 0, 0.7);
-            padding: 15px;
-            border-radius: 10px;
-            border: 1px solid #555;
-            box-shadow: 0 0 10px rgba(100, 100, 255, 0.5);
-        }
-        
-        #dashboard h3 {
-            margin-top: 0;
-            color: #3498db;
-            text-shadow: 0 0 5px #3498db;
-        }
-        
-        .dashboard-item {
-            margin-bottom: 10px;
-        }
-        
-        .dashboard-label {
-            font-size: 14px;
-            color: #bbb;
-        }
-        
-        .dashboard-value {
-            font-size: 18px;
-            font-weight: bold;
-            font-family: 'Courier New', monospace;
-        }
-        
-        .critical {
-            color: #ff5555;
-        }
-        
-        .warning {
-            color: #ffaa00;
-        }
-        
-        .good {
-            color: #55ff55;
-        }
-        
-        #fuel-bar {
-            width: 100%;
-            height: 8px;
-            background-color: #333;
-            border-radius: 4px;
-            margin-top: 5px;
-        }
-        
-        #fuel-level {
-            height: 100%;
-            background: linear-gradient(to right, #ff5555, #ffaa00, #55ff55);
-            border-radius: 4px;
-            transition: width 0.3s;
-        }
-        
-        #controls {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-        }
-        
-        .control-btn {
-            width: 80px;
-            height: 40px;
-            margin: 5px;
-            font-size: 14px;
-            background-color: #3498db;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            box-shadow: 0 0 10px rgba(52, 152, 219, 0.5);
-            transition: all 0.2s;
-        }
-        
-        .control-btn:hover {
-            background-color: #2980b9;
-            box-shadow: 0 0 15px rgba(52, 152, 219, 0.8);
-        }
-        
-        .control-btn:active {
-            transform: scale(0.95);
-        }
-        
-        #message-container {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: rgba(0, 0, 0, 0.8);
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-            box-shadow: 0 0 20px rgba(100, 100, 255, 0.7);
-            display: none;
-            max-width: 80%;
-        }
-        
-        #message-title {
-            font-size: 28px;
-            margin-bottom: 15px;
-            color: #3498db;
-            text-shadow: 0 0 5px #3498db;
-        }
-        
-        #message-text {
-            font-size: 16px;
-            margin-bottom: 20px;
-            line-height: 1.5;
-        }
-        
-        #restart-btn {
-            padding: 10px 20px;
-            font-size: 16px;
-            background-color: #3498db;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        #restart-btn:hover {
-            background-color: #2980b9;
-        }
-        
-        #fact-container {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            width: 250px;
-            background-color: rgba(0, 0, 0, 0.7);
-            padding: 15px;
-            border-radius: 10px;
-            border: 1px solid #555;
-            box-shadow: 0 0 10px rgba(100, 100, 255, 0.5);
-        }
-        
-        #fact-title {
-            color: #3498db;
-            text-shadow: 0 0 5px #3498db;
-            margin-top: 0;
-            font-size: 16px;
-        }
-        
-        #fact-text {
-            font-size: 14px;
-            line-height: 1.4;
-        }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+    <title>Lunar Lander IMPOSSIBLE</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div id="game-wrapper">
     <div id="game-container">
-        <div id="stars"></div>
+            <div class="danger-border"></div>
+            <div class="speed-lines"></div>
+            <div class="near-miss-flash"></div>
+            <div class="near-miss-particles"></div>
+            <div id="stars-bg"></div>
+            <div id="stars-mg"></div>
+            <div id="stars-fg"></div>
         <div id="earth"></div>
         <div id="moon-surface"></div>
         <div id="landing-pad"></div>
+            <div id="landing-guides">
+                <div class="landing-guide approach-line"></div>
+                <div class="landing-guide ideal-angle-zone"></div>
+                <div class="landing-guide speed-markers"></div>
+                <div class="landing-guide distance-markers"></div>
+            </div>
         
         <div id="lander">
-            <div class="thrust"></div>
             <svg id="lander-img" viewBox="0 0 100 150" xmlns="http://www.w3.org/2000/svg">
-                <!-- Lander body -->
-                <path d="M20 60 L40 30 L60 30 L80 60 L80 120 L20 120 Z" fill="#ddd" stroke="#999" stroke-width="2" />
-                <!-- Windows -->
-                <circle cx="50" cy="50" r="8" fill="#7ebbff" stroke="#444" stroke-width="1" />
-                <!-- Legs -->
-                <path d="M20 120 L10 140" stroke="#aaa" stroke-width="3" />
-                <path d="M80 120 L90 140" stroke="#aaa" stroke-width="3" />
-                <path d="M5 140 L15 140" stroke="#aaa" stroke-width="3" />
-                <path d="M85 140 L95 140" stroke="#aaa" stroke-width="3" />
-                <!-- Thrusters -->
-                <rect x="40" y="120" width="20" height="5" fill="#888" />
+                     <path d="M25 20 L50 10 L75 20 L85 80 L15 80 Z" class="lander-main"/>
+                     <circle cx="50" cy="35" r="10" class="window" />
+                     <path d="M25 80 L15 120" class="legs leg-left" />
+                     <path d="M75 80 L85 120" class="legs leg-right" />
+                     <path d="M10 120 L20 120" class="legs foot-left"/>
+                     <path d="M80 120 L90 120" class="legs foot-right"/>
+                     <rect x="40" y="75" width="20" height="10" class="thruster-nozzle"/>
+                     <rect x="15" y="40" width="10" height="8" class="thruster-nozzle side-nozzle-left"/>
+                     <rect x="75" y="40" width="10" height="8" class="thruster-nozzle side-nozzle-right"/>
+
+                     <g id="damage-elements">
+                         <path d="M45 30 l5 8 l-6 2 l3 -7" class="damage-crack window-crack" />
+                         <path d="M51 36 l5 -3 l-1 6 l-3 -1" class="damage-crack window-crack" />
+                         <path d="M20 100 l-3 5 l4 -1 Z" class="damage-bent-leg leg-damage" />
+                     </g>
             </svg>
+                <div class="thruster-glow"></div>
+                <div class="thruster-flame"></div>
+                <div class="side-thruster-glow left"></div>
+                <div class="side-thruster-flame left"></div>
+                <div class="side-thruster-glow right"></div>
+                <div class="side-thruster-flame right"></div>
         </div>
-        
         <div id="dashboard">
-            <h3>Mission Control</h3>
+                <h3 id="dashboard-title">MISSION STATUS</h3>
+                <div class="dashboard-item">
+                    <span class="dashboard-label">ALT:</span><span id="altitude" class="dashboard-value good">0 m</span>
+                </div>
+                <div class="dashboard-item">
+                    <span class="dashboard-label">V SPD:</span><span id="vertical-speed" class="dashboard-value good">0.0 m/s</span>
+                </div>
             <div class="dashboard-item">
-                <div class="dashboard-label">Altitude</div>
-                <div id="altitude" class="dashboard-value good">1000 m</div>
+                    <span class="dashboard-label">H SPD:</span><span id="horizontal-speed" class="dashboard-value good">0.0 m/s</span>
             </div>
             <div class="dashboard-item">
-                <div class="dashboard-label">Vertical Speed</div>
-                <div id="vertical-speed" class="dashboard-value good">0.0 m/s</div>
+                    <span class="dashboard-label">ROT:</span><span id="rotation" class="dashboard-value good">0 deg</span>
             </div>
             <div class="dashboard-item">
-                <div class="dashboard-label">Horizontal Speed</div>
-                <div id="horizontal-speed" class="dashboard-value good">0.0 m/s</div>
+                    <span class="dashboard-label">FUEL:</span><div id="fuel-bar"><div id="fuel-level"></div></div>
             </div>
             <div class="dashboard-item">
-                <div class="dashboard-label">Fuel</div>
-                <div id="fuel-bar">
-                    <div id="fuel-level"></div>
+                    <span class="dashboard-label">DEST:</span><span id="planet-display" class="dashboard-value">???</span>
                 </div>
             </div>
+
+             <div id="highscore-display">
+                <h3>HIGH SCORES</h3>
+                <ol id="highscore-list"></ol>
         </div>
         
-        <div id="controls">
-            <button id="left-btn" class="control-btn">Left</button>
-            <button id="thrust-btn" class="control-btn">Thrust</button>
-            <button id="right-btn" class="control-btn">Right</button>
+            <div id="controls-info">
+                Controls: <span>&uarr;</span> Thrust | <span>&larr;</span> Rotate Left | <span>&rarr;</span> Rotate Right | <span>P</span> Pause
         </div>
         
-        <div id="fact-container">
-            <h3 id="fact-title">Lunar Landing Facts</h3>
-            <p id="fact-text">Apollo 11 was the first manned mission to land on the Moon, on July 20, 1969. Neil Armstrong and Edwin "Buzz" Aldrin became the first humans to walk on the lunar surface.</p>
         </div>
         
+         <div id="message-overlay">
         <div id="message-container">
-            <div id="message-title">Mission Complete</div>
-            <div id="message-text">Congratulations! You've successfully landed on the Moon.</div>
-            <button id="restart-btn">Start New Mission</button>
+                <div id="message-title">Mission Result</div>
+                <div id="message-text">Landing details...</div>
+                <div id="message-score">Score: 0</div>
+                <div id="message-highscore"></div>
+                 <img id="silly-success-graphic" src="silly-graphic.png" alt="Woohoo!" style="display: none;">
+                <button id="next-planet-btn" class="btn" style="display: none;">Next Planet</button>
+                <button id="restart-btn" class="btn">Try Again</button>
+                <button id="main-menu-btn" class="btn">Main Menu</button>
+            </div>
+        </div>
+
+         <div id="start-screen">
+             <h1>Lander IMPOSSIBLE</h1>
+             <p>Guide your module to a safe landing. It's incredibly hard. Control your rotation and thrust carefully. Avoid obstacles and the harsh planetary surface! Only the best pilots can reach other planets.</p>
+             <div id="planet-progression" style="display: none;">
+                <h3>Unlocked Destinations:</h3>
+                <div id="planet-list"></div>
+            </div>
+             <button id="start-game-btn" class="btn">Attempt Mission</button>
+    </div>
+
+         </div>
+
+    <!-- Add mobile controls -->
+    <div id="mobile-controls" class="mobile-controls">
+        <div class="control-row">
+            <button id="rotate-left-btn" class="control-btn rotate-btn">←</button>
+        </div>
+        <div class="control-row">
+            <button id="thrust-btn" class="control-btn thrust-btn">↑</button>
+        </div>
+        <div class="control-row">
+            <button id="rotate-right-btn" class="control-btn rotate-btn">→</button>
         </div>
     </div>
 
-    <script>
-        // Game state
-        let altitude = 1000;
-        let horizontalPosition = 50;
-        let verticalSpeed = 0;
-        let horizontalSpeed = 0;
-        let fuel = 100;
-        let gravity = 0.162; // Moon's gravity (1/6 of Earth's)
-        let thrustPower = 0.4;
-        let gameActive = true;
-        let thrustActive = false;
-        let leftThrustActive = false;
-        let rightThrustActive = false;
-        let gameTimerId;
-        let currentFact = 0;
-        
-        // Elements
-        const lander = document.getElementById('lander');
-        const thrust = document.querySelector('.thrust');
-        const altitudeDisplay = document.getElementById('altitude');
-        const verticalSpeedDisplay = document.getElementById('vertical-speed');
-        const horizontalSpeedDisplay = document.getElementById('horizontal-speed');
-        const fuelLevel = document.getElementById('fuel-level');
-        const messageContainer = document.getElementById('message-container');
-        const messageTitle = document.getElementById('message-title');
-        const messageText = document.getElementById('message-text');
-        const restartBtn = document.getElementById('restart-btn');
-        const thrustBtn = document.getElementById('thrust-btn');
-        const leftBtn = document.getElementById('left-btn');
-        const rightBtn = document.getElementById('right-btn');
-        const factText = document.getElementById('fact-text');
-        
-        // Create stars
-        function createStars() {
-            const starsContainer = document.getElementById('stars');
-            const starCount = 200;
-            
-            for (let i = 0; i < starCount; i++) {
-                const star = document.createElement('div');
-                star.classList.add('star');
-                star.style.width = `${Math.random() * 3 + 1}px`;
-                star.style.height = star.style.width;
-                star.style.left = `${Math.random() * 100}%`;
-                star.style.top = `${Math.random() * 100}%`;
-                star.style.animationDelay = `${Math.random() * 3}s`;
-                starsContainer.appendChild(star);
-            }
-        }
-        
-        // Create craters
-        function createCraters() {
-            const moonSurface = document.getElementById('moon-surface');
-            const craterCount = 20;
-            
-            for (let i = 0; i < craterCount; i++) {
-                const crater = document.createElement('div');
-                crater.classList.add('crater');
-                crater.style.width = `${Math.random() * 50 + 10}px`;
-                crater.style.height = crater.style.width;
-                crater.style.left = `${Math.random() * 100}%`;
-                crater.style.top = `${Math.random() * 80}%`;
-                moonSurface.appendChild(crater);
-            }
-        }
-        
-        // Educational facts about moon landings
-        const lunarFacts = [
-            "Apollo 11 was the first manned mission to land on the Moon, on July 20, 1969. Neil Armstrong and Edwin 'Buzz' Aldrin became the first humans to walk on the lunar surface.",
-            "The Moon's gravity is approximately 1/6 of Earth's gravity, which is why astronauts can jump so high on the Moon.",
-            "The lunar module used in the Apollo missions had to land with limited fuel. Too fast a descent would damage the lander and endanger the astronauts.",
-            "The first words spoken from the Moon were: 'Houston, Tranquility Base here. The Eagle has landed.'",
-            "During the Apollo 11 mission, the lunar module had only about 25 seconds of fuel left when it landed.",
-            "The Moon has no atmosphere, which means there's no air resistance to slow down descending spacecraft.",
-            "The surface of the Moon reaches 260°F (127°C) during the day and drops to -280°F (-173°C) at night.",
-            "A total of 12 astronauts have walked on the Moon during the six successful Apollo missions between 1969 and 1972.",
-            "The Moon is approximately 238,855 miles (384,400 km) away from Earth.",
-            "The first lunar landing almost failed due to computer overloads and alarms. Neil Armstrong had to take manual control."
-        ];
-        
-        // Change the educational fact every 10 seconds
-        function rotateFacts() {
-            setInterval(() => {
-                currentFact = (currentFact + 1) % lunarFacts.length;
-                factText.textContent = lunarFacts[currentFact];
-            }, 10000);
-        }
-        
-        // Initialize the game
-        function initGame() {
-            createStars();
-            createCraters();
-            updateLander();
-            updateDisplays();
-            fuelLevel.style.width = '100%';
-            rotateFacts();
-            
-            gameTimerId = setInterval(gameLoop, 50);
-            
-            // Controls
-            document.addEventListener('keydown', handleKeyDown);
-            document.addEventListener('keyup', handleKeyUp);
-            
-            thrustBtn.addEventListener('mousedown', () => { thrustActive = true; });
-            thrustBtn.addEventListener('mouseup', () => { thrustActive = false; });
-            thrustBtn.addEventListener('touchstart', () => { thrustActive = true; });
-            thrustBtn.addEventListener('touchend', () => { thrustActive = false; });
-            
-            leftBtn.addEventListener('mousedown', () => { leftThrustActive = true; });
-            leftBtn.addEventListener('mouseup', () => { leftThrustActive = false; });
-            leftBtn.addEventListener('touchstart', () => { leftThrustActive = true; });
-            leftBtn.addEventListener('touchend', () => { leftThrustActive = false; });
-            
-            rightBtn.addEventListener('mousedown', () => { rightThrustActive = true; });
-            rightBtn.addEventListener('mouseup', () => { rightThrustActive = false; });
-            rightBtn.addEventListener('touchstart', () => { rightThrustActive = true; });
-            rightBtn.addEventListener('touchend', () => { rightThrustActive = false; });
-            
-            restartBtn.addEventListener('click', restartGame);
-        }
-        
-        // Handle key presses
-        function handleKeyDown(e) {
-            if (gameActive) {
-                if (e.key === 'ArrowUp' || e.key === ' ') {
-                    thrustActive = true;
-                }
-                if (e.key === 'ArrowLeft') {
-                    leftThrustActive = true;
-                }
-                if (e.key === 'ArrowRight') {
-                    rightThrustActive = true;
-                }
-            }
-        }
-        
-        // Handle key releases
-        function handleKeyUp(e) {
-            if (e.key === 'ArrowUp' || e.key === ' ') {
-                thrustActive = false;
-            }
-            if (e.key === 'ArrowLeft') {
-                leftThrustActive = false;
-            }
-            if (e.key === 'ArrowRight') {
-                rightThrustActive = false;
-            }
-        }
-        
-        // Game loop
-        function gameLoop() {
-            if (!gameActive) return;
-            
-            // Apply gravity
-            verticalSpeed += gravity;
-            
-            // Apply thrust if active and there's fuel
-            if (thrustActive && fuel > 0) {
-                verticalSpeed -= thrustPower;
-                fuel -= 0.3;
-                thrust.style.opacity = '1';
-                thrust.style.height = `${Math.random() * 10 + 15}px`;
-            } else {
-                thrust.style.opacity = '0';
-            }
-            
-            // Apply horizontal thrust
-            if (leftThrustActive && fuel > 0) {
-                horizontalSpeed -= 0.1;
-                fuel -= 0.1;
-            }
-            
-            if (rightThrustActive && fuel > 0) {
-                horizontalSpeed += 0.1;
-                fuel -= 0.1;
-            }
-            
-            // Update positions
-            altitude -= verticalSpeed;
-            horizontalPosition += horizontalSpeed;
-            
-            // Apply slight drag/friction to horizontal movement
-            horizontalSpeed *= 0.98;
-            
-            // Check for landing or crash
-            if (altitude <= 0) {
-                altitude = 0;
-                checkLanding();
-            }
-            
-            // Check fuel
-            if (fuel <= 0) {
-                fuel = 0;
-                thrust.style.opacity = '0';
-            }
-            
-            // Limit horizontal boundaries
-            if (horizontalPosition < 0) {
-                horizontalPosition = 0;
-                horizontalSpeed = 0;
-            } else if (horizontalPosition > 100) {
-                horizontalPosition = 100;
-                horizontalSpeed = 0;
-            }
-            
-            // Update displays and lander position
-            updateLander();
-            updateDisplays();
-        }
-        
-        // Update lander position
-        function updateLander() {
-            const gameHeight = document.getElementById('game-container').clientHeight;
-            const moonHeight = document.getElementById('moon-surface').clientHeight;
-            const landerHeight = document.getElementById('lander').clientHeight;
-            
-            // Calculate the maximum distance the lander can travel (from top to just above moon surface)
-            const maxDistance = gameHeight - moonHeight - landerHeight;
-            
-            // Position lander based on altitude
-            const altitudePercentage = altitude / 1000; // 1000 is the starting altitude
-            const landerTop = maxDistance * (1 - altitudePercentage);
-            
-            lander.style.top = `${landerTop}px`;
-            lander.style.left = `${horizontalPosition}%`;
-            
-            // Rotate lander based on horizontal speed
-            lander.style.transform = `translateX(-50%) rotate(${horizontalSpeed * 5}deg)`;
-        }
-        
-        // Update displays
-        function updateDisplays() {
-            altitudeDisplay.textContent = `${Math.max(0, Math.round(altitude))} m`;
-            verticalSpeedDisplay.textContent = `${verticalSpeed.toFixed(1)} m/s`;
-            horizontalSpeedDisplay.textContent = `${horizontalSpeed.toFixed(1)} m/s`;
-            fuelLevel.style.width = `${fuel}%`;
-            
-            // Update colors based on status
-            updateDisplayColors();
-        }
-        
-        // Update display colors based on values
-        function updateDisplayColors() {
-            // Altitude warning
-            if (altitude < 100) {
-                altitudeDisplay.className = 'dashboard-value warning';
-            } else {
-                altitudeDisplay.className = 'dashboard-value good';
-            }
-            
-            // Vertical speed warning
-            if (verticalSpeed > 3) {
-                verticalSpeedDisplay.className = 'dashboard-value critical';
-            } else if (verticalSpeed > 1.5) {
-                verticalSpeedDisplay.className = 'dashboard-value warning';
-            } else {
-                verticalSpeedDisplay.className = 'dashboard-value good';
-            }
-            
-            // Horizontal speed warning
-            if (Math.abs(horizontalSpeed) > 2) {
-                horizontalSpeedDisplay.className = 'dashboard-value critical';
-            } else if (Math.abs(horizontalSpeed) > 1) {
-                horizontalSpeedDisplay.className = 'dashboard-value warning';
-            } else {
-                horizontalSpeedDisplay.className = 'dashboard-value good';
-            }
-        }
-        
-        // Check for landing or crash
-        function checkLanding() {
-            gameActive = false;
-            clearInterval(gameTimerId);
-            
-            const landingPad = document.getElementById('landing-pad');
-            const landerRect = lander.getBoundingClientRect();
-            const padRect = landingPad.getBoundingClientRect();
-            
-            const landerCenterX = landerRect.left + landerRect.width / 2;
-            const onLandingPad = landerCenterX >= padRect.left && landerCenterX <= padRect.right;
-            
-            messageContainer.style.display = 'block';
-            
-            if (verticalSpeed <= 1.5 && Math.abs(horizontalSpeed) <= 1 && onLandingPad) {
-                // Successful landing
-                messageTitle.textContent = 'Mission Successful!';
-                messageTitle.style.color = '#55ff55';
-                
-                // Calculate score based on remaining fuel and landing speed
-                const score = Math.round((fuel * 0.6) + (1.5 - verticalSpeed) * 20 + (1 - Math.abs(horizontalSpeed)) * 20);
-                
-                messageText.innerHTML = `
-                    <p>Congratulations! You've successfully landed on the Moon.</p>
-                    <p>Landing Statistics:</p>
-                    <p>Descent Speed: ${verticalSpeed.toFixed(2)} m/s</p>
-                    <p>Horizontal Speed: ${horizontalSpeed.toFixed(2)} m/s</p>
-                    <p>Remaining Fuel: ${Math.round(fuel)}%</p>
-                    <p>Mission Score: ${score}/100</p>
-                    <p>Now you've experienced just a small part of what the Apollo astronauts accomplished!</p>
-                `;
-            } else if (verticalSpeed <= 3 && Math.abs(horizontalSpeed) <= 2) {
-                // Rough landing
-                messageTitle.textContent = 'Rough Landing';
-                messageTitle.style.color = '#ffaa00';
-                messageText.innerHTML = `
-                    <p>You've landed on the Moon, but with some damage to the lander.</p>
-                    <p>Your descent was too fast (${verticalSpeed.toFixed(2)} m/s) or horizontal speed too high (${horizontalSpeed.toFixed(2)} m/s).</p>
-                    <p>For a safe landing, vertical speed should be under 1.5 m/s and horizontal speed under 1 m/s.</p>
-                    <p>Also, make sure to land on the designated landing pad!</p>
-                `;
-            } else {
-                // Crash
-                messageTitle.textContent = 'Mission Failed';
-                messageTitle.style.color = '#ff5555';
-                messageText.innerHTML = `
-                    <p>Your lunar module has crashed!</p>
-                    <p>Descent Speed: ${verticalSpeed.toFixed(2)} m/s (Should be under 1.5 m/s)</p>
-                    <p>Horizontal Speed: ${horizontalSpeed.toFixed(2)} m/s (Should be under 1 m/s)</p>
-                    <p>The Apollo 11 lunar module "Eagle" had to land very carefully to avoid damage.</p>
-                    <p>Try again and remember to use your thrusters to slow your descent!</p>
-                `;
-            }
-        }
-        
-        // Restart the game
-        function restartGame() {
-            altitude = 1000;
-            horizontalPosition = 50;
-            verticalSpeed = 0;
-            horizontalSpeed = 0;
-            fuel = 100;
-            gameActive = true;
-            thrustActive = false;
-            leftThrustActive = false;
-            rightThrustActive = false;
-            
-            updateLander();
-            updateDisplays();
-            messageContainer.style.display = 'none';
-            
-            gameTimerId = setInterval(gameLoop, 50);
-        }
-        
-        // Start the game
-        window.onload = initGame;
-    </script>
+    <script src="script.js"></script>
 </body>
 </html>
