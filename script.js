@@ -207,12 +207,91 @@ function createThrusterParticles(x, y, angle, intensity) {
 
 function createExplosion(x, y) {
     playSound('explosion', false, 0.8);
+    
+    // Create ground impact effect
+    const impact = document.createElement('div');
+    impact.className = 'ground-impact';
+    impact.style.left = `${x}px`;
+    impact.style.bottom = `${gameState.game.height - y}px`;
+    DOMElements.container.appendChild(impact);
+    
+    // Create crater effect
+    const crater = document.createElement('div');
+    crater.className = 'crater-effect';
+    crater.style.left = `${x}px`;
+    crater.style.bottom = `${gameState.game.height - y}px`;
+    DOMElements.container.appendChild(crater);
+    
+    // Create dust trail
+    for (let i = 0; i < 8; i++) {
+        const dust = document.createElement('div');
+        dust.className = 'dust-trail';
+        dust.style.left = `${x + (Math.random() - 0.5) * 40}px`;
+        dust.style.bottom = `${gameState.game.height - y + Math.random() * 20}px`;
+        dust.style.animationDelay = `${i * 0.1}s`;
+        DOMElements.container.appendChild(dust);
+    }
+    
     // Reads colors from CSS variables defined in style.css
     const explosionColorStart = getComputedStyle(document.documentElement).getPropertyValue('--explosion-color-start').trim();
     const explosionColorEnd = getComputedStyle(document.documentElement).getPropertyValue('--explosion-color-end').trim();
-    for (let i = 0; i < CONFIG.PARTICLE_COUNT_EXPLOSION; i++) { const angle = Math.random() * Math.PI * 2; const speed = 1 + Math.random() * 4; createParticle({ x: x, y: y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 1, life: 500 + Math.random() * 1000, size: 3 + Math.random() * 5, colorStart: hexToRgba(explosionColorStart, 1), colorEnd: hexToRgba(explosionColorEnd, 0), gravity: CONFIG.GRAVITY_BASE * 0.5, type: 'explosion' }); }
+    
+    // Create explosion particles
+    for (let i = 0; i < CONFIG.PARTICLE_COUNT_EXPLOSION; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 1 + Math.random() * 4;
+        createParticle({
+            x: x,
+            y: y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - 1,
+            life: 500 + Math.random() * 1000,
+            size: 3 + Math.random() * 5,
+            colorStart: hexToRgba(explosionColorStart, 1),
+            colorEnd: hexToRgba(explosionColorEnd, 0),
+            gravity: CONFIG.GRAVITY_BASE * 0.5,
+            type: 'explosion'
+        });
+    }
+    
+    // Create lander debris
+    for (let i = 0; i < 12; i++) {
+        const debris = document.createElement('div');
+        debris.className = 'particle debris';
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 2 + Math.random() * 3;
+        const size = 2 + Math.random() * 4;
+        
+        debris.style.width = `${size}px`;
+        debris.style.height = `${size}px`;
+        debris.style.backgroundColor = '#aaa';
+        debris.style.left = `${x}px`;
+        debris.style.top = `${y}px`;
+        
+        // Set random rotation
+        debris.style.setProperty('--rotation', `${Math.random() * 720 - 360}deg`);
+        
+        // Set random trajectory
+        debris.style.setProperty('--vx', `${Math.cos(angle) * speed * 20}px`);
+        debris.style.setProperty('--vy', `${Math.sin(angle) * speed * 20}px`);
+        
+        DOMElements.container.appendChild(debris);
+        
+        // Remove debris after animation
+        setTimeout(() => debris.remove(), 2000);
+    }
+    
     // Adds shake effect class from style.css
-    if(DOMElements.container) { DOMElements.container.classList.add('shake-effect'); setTimeout(() => DOMElements.container?.classList.remove('shake-effect'), 500); }
+    if(DOMElements.container) {
+        DOMElements.container.classList.add('shake-effect');
+        setTimeout(() => DOMElements.container?.classList.remove('shake-effect'), 500);
+    }
+    
+    // Clean up effects after animation
+    setTimeout(() => {
+        impact?.remove();
+        crater?.remove();
+    }, 2000);
 }
 function createDust(x, y, count = CONFIG.PARTICLE_COUNT_DUST) {
     // Reads color from CSS variable defined in style.css

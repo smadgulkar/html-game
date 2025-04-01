@@ -908,76 +908,94 @@ body {
 
 .ground-impact {
     position: absolute;
-    width: 20px;
-    height: 20px;
-    background: radial-gradient(circle at center,
-        rgba(255, 255, 255, 0.8),
-        rgba(255, 255, 255, 0.4),
-        transparent 70%
-    );
+    width: 60px;
+    height: 60px;
+    transform: translate(-50%, 50%);
+    background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%);
     border-radius: 50%;
     pointer-events: none;
-    z-index: 4;
     animation: impactExpand 0.5s ease-out forwards;
+    z-index: 15;
 }
 
 .crater-effect {
     position: absolute;
     width: 40px;
-    height: 40px;
-    background: radial-gradient(circle at center,
-        rgba(0, 0, 0, 0.8),
-        rgba(0, 0, 0, 0.4),
-        transparent 70%
-    );
+    height: 20px;
+    transform: translate(-50%, 50%);
+    background: radial-gradient(ellipse at center, var(--crater-inner-color) 0%, var(--crater-outer-color) 70%, transparent 100%);
     border-radius: 50%;
     pointer-events: none;
+    opacity: 0;
+    animation: craterExpand 1s ease-out forwards;
     z-index: 4;
-    animation: craterExpand 0.8s ease-out forwards;
+}
+
+.dust-trail {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    transform: translate(-50%, 50%);
+    background: radial-gradient(circle, var(--dust-color) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+    opacity: 0;
+    animation: dustFade 1s ease-out forwards;
+    z-index: 14;
+}
+
+.debris {
+    position: absolute;
+    background-color: #aaa;
+    border-radius: 2px;
+    pointer-events: none;
+    z-index: 11;
+    animation: debrisTrajectory 2s ease-out forwards;
 }
 
 @keyframes impactExpand {
     0% {
-        transform: scale(0.5);
+        transform: translate(-50%, 50%) scale(0.2);
         opacity: 1;
     }
     100% {
-        transform: scale(2);
+        transform: translate(-50%, 50%) scale(2);
         opacity: 0;
     }
 }
 
 @keyframes craterExpand {
     0% {
-        transform: scale(0.5);
-        opacity: 1;
-    }
-    100% {
-        transform: scale(3);
+        transform: translate(-50%, 50%) scale(0.5);
         opacity: 0;
     }
-}
-
-/* Enhanced Dust Trail */
-.dust-trail {
-    position: absolute;
-    width: 4px;
-    height: 4px;
-    background: var(--dust-color);
-    border-radius: 50%;
-    opacity: 0.4;
-    pointer-events: none;
-    z-index: 7;
-    animation: dustFade 1s linear forwards;
+    50% {
+        opacity: 0.7;
+    }
+    100% {
+        transform: translate(-50%, 50%) scale(1);
+        opacity: 0.5;
+    }
 }
 
 @keyframes dustFade {
     0% {
-        transform: scale(1);
-        opacity: 0.4;
+        transform: translate(-50%, 50%) scale(0.2);
+        opacity: 0.8;
     }
     100% {
-        transform: scale(0.5);
+        transform: translate(-50%, 50%) translate(var(--wind-x, 0px), -20px) scale(2);
+        opacity: 0;
+    }
+}
+
+@keyframes debrisTrajectory {
+    0% {
+        transform: translate(-50%, -50%) rotate(0deg);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(calc(-50% + var(--vx)), calc(-50% + var(--vy))) rotate(var(--rotation));
         opacity: 0;
     }
 }
@@ -1245,43 +1263,39 @@ body {
 
 /* Mobile Controls */
 .mobile-controls {
-    display: none; /* Hidden by default, shown on mobile */
     position: fixed;
     bottom: 20px;
     left: 50%;
     transform: translateX(-50%);
+    display: flex;
+    gap: 20px;
     z-index: 1000;
-    width: 100%;
-    max-width: 300px;
-    padding: 10px;
-    box-sizing: border-box;
+    pointer-events: none;
 }
 
 .control-row {
     display: flex;
-    justify-content: center;
-    gap: 20px;
-    margin: 10px 0;
+    gap: 10px;
+    pointer-events: auto;
 }
 
 .control-btn {
     width: 60px;
     height: 60px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 2px solid var(--info-color);
     border-radius: 50%;
-    background: rgba(52, 152, 219, 0.8);
-    border: none;
     color: white;
-    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
+    user-select: none;
     touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
-    transition: all 0.2s ease;
-    box-shadow: 0 0 15px rgba(52, 152, 219, 0.4);
 }
 
 .control-btn:active {
-    background: rgba(52, 152, 219, 1);
-    transform: scale(0.95);
+    background: rgba(52, 152, 219, 0.3);
 }
 
 .thrust-btn {
@@ -1296,27 +1310,24 @@ body {
 /* Mobile Responsive Adjustments */
 @media (max-width: 768px) {
     .mobile-controls {
-        display: block;
+        bottom: 80px; /* Move controls up to avoid overlap */
+        width: 100%;
+        justify-content: space-around;
+        padding: 0 20px;
     }
-
+    
+    .control-btn {
+        width: 50px;
+        height: 50px;
+    }
+    
     #dashboard {
-        top: 5px;
-        left: 5px;
-        padding: 10px;
-        min-width: 150px;
+        font-size: 12px;
+        padding: 5px;
     }
-
+    
     .dashboard-item {
-        margin-bottom: 5px;
-    }
-
-    .dashboard-label {
-        font-size: 12px;
-    }
-
-    .dashboard-value {
-        font-size: 12px;
-        min-width: 60px;
+        margin: 2px;
     }
 
     #controls-info {
@@ -1363,6 +1374,13 @@ body {
 
     #highscore-list {
         font-size: 12px;
+    }
+}
+
+/* Hide mobile controls on desktop */
+@media (min-width: 769px) {
+    .mobile-controls {
+        display: none;
     }
 }
 
