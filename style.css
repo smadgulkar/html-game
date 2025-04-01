@@ -1390,3 +1390,26 @@ body {
     -webkit-user-select: none;
     user-select: none;
 }
+
+.footnote {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 14px;
+    color: var(--text-color);
+    opacity: 0.7;
+    text-align: center;
+    width: 100%;
+}
+
+.footnote a {
+    color: var(--info-color);
+    text-decoration: none;
+    transition: opacity 0.2s;
+}
+
+.footnote a:hover {
+    opacity: 0.8;
+    text-decoration: underline;
+}
