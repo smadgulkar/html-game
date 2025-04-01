@@ -1132,3 +1132,112 @@ body {
     background-color: rgba(0, 0, 0, 0.5);
     box-shadow: 0 0 5px rgba(255, 255, 255, 0.1);
 }
+
+/* Side Thruster Effects */
+.side-thruster-flame {
+    position: absolute;
+    width: 20px;
+    height: 8px;
+    background: linear-gradient(to right, 
+        rgba(255, 170, 0, 0.8),  /* Orange start */
+        rgba(255, 85, 0, 0.6),   /* Red middle */
+        rgba(255, 0, 0, 0)       /* Transparent end */
+    );
+    filter: blur(1px);
+    transform-origin: left center;
+    pointer-events: none;
+    z-index: 8;
+    opacity: 0;
+    transition: opacity 0.1s ease;
+    top: 45%;
+}
+
+.side-thruster-flame.left {
+    left: 0;
+    transform-origin: left center;
+}
+
+.side-thruster-flame.right {
+    right: 0;
+    transform: scaleX(-1);
+    transform-origin: right center;
+}
+
+.side-thruster-glow {
+    position: absolute;
+    width: 25px;
+    height: 12px;
+    background: radial-gradient(ellipse at center,
+        rgba(255, 170, 0, 0.3),  /* Orange glow */
+        rgba(255, 85, 0, 0.1),   /* Red glow */
+        rgba(255, 0, 0, 0)       /* Transparent */
+    );
+    filter: blur(2px);
+    pointer-events: none;
+    z-index: 7;
+    opacity: 0;
+    transition: opacity 0.1s ease;
+    top: 44%;
+}
+
+.side-thruster-glow.left {
+    left: -2px;
+    transform-origin: left center;
+}
+
+.side-thruster-glow.right {
+    right: -2px;
+    transform: scaleX(-1);
+    transform-origin: right center;
+}
+
+.side-thruster-flame.active,
+.side-thruster-glow.active {
+    opacity: 1;
+}
+
+.side-thruster-flame.low-fuel {
+    background: linear-gradient(to right, 
+        rgba(255, 255, 0, 0.8),  /* Yellow start */
+        rgba(255, 170, 0, 0.6),  /* Orange middle */
+        rgba(255, 0, 0, 0)       /* Transparent end */
+    );
+}
+
+.side-thruster-flame.critical {
+    background: linear-gradient(to right, 
+        rgba(255, 0, 0, 0.8),    /* Red start */
+        rgba(255, 85, 0, 0.6),   /* Dark red middle */
+        rgba(255, 0, 0, 0)       /* Transparent end */
+    );
+}
+
+.side-thruster-glow.low-fuel {
+    background: radial-gradient(ellipse at center,
+        rgba(255, 255, 0, 0.3),  /* Yellow glow */
+        rgba(255, 170, 0, 0.1),  /* Orange glow */
+        rgba(255, 0, 0, 0)       /* Transparent */
+    );
+}
+
+.side-thruster-glow.critical {
+    background: radial-gradient(ellipse at center,
+        rgba(255, 0, 0, 0.3),    /* Red glow */
+        rgba(255, 85, 0, 0.1),   /* Dark red glow */
+        rgba(255, 0, 0, 0)       /* Transparent */
+    );
+}
+
+@keyframes sideThrusterPulse {
+    0% { transform: scaleX(1); }
+    50% { transform: scaleX(1.2); }
+    100% { transform: scaleX(1); }
+}
+
+.side-thruster-flame.active.left {
+    animation: sideThrusterPulse 0.1s ease-in-out infinite;
+}
+
+.side-thruster-flame.active.right {
+    animation: sideThrusterPulse 0.1s ease-in-out infinite reverse;
+}

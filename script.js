@@ -152,12 +152,59 @@ function updateParticles(deltaTime) {
 }
 function createThrustParticles() {
     if (!gameState.game.active || gameState.lander.fuel <= 0 || gameState.lander.thrusterMalfunctioning) return;
-    const angleRad = degToRad(gameState.lander.angle); const nozzleOffsetY = gameState.lander.height / 2 + 5; const rotatedNozzleX = gameState.lander.x - nozzleOffsetY * Math.sin(angleRad); const rotatedNozzleY = gameState.lander.y + nozzleOffsetY * Math.cos(angleRad); const thrustMag = 0.5 + Math.random() * 0.5; const spread = 0.5;
-    // Reads colors from CSS variables defined in style.css
+    
+    const angleRad = degToRad(gameState.lander.angle);
+    
+    // Main thruster particles
+    if (gameState.controls.thrust) {
+        const nozzleOffsetY = gameState.lander.height / 2 + 5;
+        const rotatedNozzleX = gameState.lander.x - nozzleOffsetY * Math.sin(angleRad);
+        const rotatedNozzleY = gameState.lander.y + nozzleOffsetY * Math.cos(angleRad);
+        
+        createThrusterParticles(rotatedNozzleX, rotatedNozzleY, angleRad + Math.PI, 0.5);
+    }
+    
+    // Side thruster particles
+    const sideNozzleOffsetY = gameState.lander.height * 0.2;
+    const sideNozzleOffsetX = gameState.lander.width * 0.4;
+    
+    if (gameState.controls.rotateLeft) {
+        const rightNozzleX = gameState.lander.x + (sideNozzleOffsetX * Math.cos(angleRad) - sideNozzleOffsetY * Math.sin(angleRad));
+        const rightNozzleY = gameState.lander.y + (sideNozzleOffsetX * Math.sin(angleRad) + sideNozzleOffsetY * Math.cos(angleRad));
+        createThrusterParticles(rightNozzleX, rightNozzleY, angleRad - Math.PI/2, 0.3);
+    }
+    
+    if (gameState.controls.rotateRight) {
+        const leftNozzleX = gameState.lander.x + (-sideNozzleOffsetX * Math.cos(angleRad) - sideNozzleOffsetY * Math.sin(angleRad));
+        const leftNozzleY = gameState.lander.y + (-sideNozzleOffsetX * Math.sin(angleRad) + sideNozzleOffsetY * Math.cos(angleRad));
+        createThrusterParticles(leftNozzleX, leftNozzleY, angleRad + Math.PI/2, 0.3);
+    }
+}
+
+function createThrusterParticles(x, y, angle, intensity) {
+    const thrustMag = intensity * (0.5 + Math.random() * 0.5);
+    const spread = 0.5;
+    
     const thrustColorStart = getComputedStyle(document.documentElement).getPropertyValue('--thrust-color-start').trim();
     const thrustColorEnd = getComputedStyle(document.documentElement).getPropertyValue('--thrust-color-end').trim();
-    for (let i = 0; i < CONFIG.PARTICLE_COUNT_THRUST; i++) { const particleAngle = angleRad + Math.PI + (Math.random() - 0.5) * spread; createParticle({ x: rotatedNozzleX, y: rotatedNozzleY, vx: gameState.lander.vx + Math.cos(particleAngle) * thrustMag, vy: gameState.lander.vy + Math.sin(particleAngle) * thrustMag, life: 200 + Math.random() * 200, size: 2 + Math.random() * 4, colorStart: hexToRgba(thrustColorStart, 1), colorEnd: hexToRgba(thrustColorEnd, 0), gravity: 0.001, type: 'thrust' }); }
+    
+    for (let i = 0; i < CONFIG.PARTICLE_COUNT_THRUST; i++) {
+        const particleAngle = angle + (Math.random() - 0.5) * spread;
+        createParticle({
+            x: x,
+            y: y,
+            vx: gameState.lander.vx + Math.cos(particleAngle) * thrustMag,
+            vy: gameState.lander.vy + Math.sin(particleAngle) * thrustMag,
+            life: 200 + Math.random() * 200,
+            size: 2 + Math.random() * 4,
+            colorStart: hexToRgba(thrustColorStart, 1),
+            colorEnd: hexToRgba(thrustColorEnd, 0),
+            gravity: 0.001,
+            type: 'thrust'
+        });
+    }
 }
+
 function createExplosion(x, y) {
     playSound('explosion', false, 0.8);
     // Reads colors from CSS variables defined in style.css
@@ -1201,37 +1248,62 @@ function createSpeedLine() {
 function updateThrusterEffects() {
     if (!gameState.game.active || !DOMElements.lander) return;
     
-    const thrusterFlame = DOMElements.lander.querySelector('.thruster-flame');
-    const thrusterGlow = DOMElements.lander.querySelector('.thruster-glow');
+    // Get all thruster elements
+    const mainThrusterFlame = DOMElements.lander.querySelector('.thruster-flame');
+    const mainThrusterGlow = DOMElements.lander.querySelector('.thruster-glow');
+    const leftThrusterFlame = DOMElements.lander.querySelector('.side-thruster-flame.left');
+    const leftThrusterGlow = DOMElements.lander.querySelector('.side-thruster-glow.left');
+    const rightThrusterFlame = DOMElements.lander.querySelector('.side-thruster-flame.right');
+    const rightThrusterGlow = DOMElements.lander.querySelector('.side-thruster-glow.right');
     
-    if (!thrusterFlame || !thrusterGlow) return;
+    if (!mainThrusterFlame || !mainThrusterGlow || !leftThrusterFlame || !leftThrusterGlow || !rightThrusterFlame || !rightThrusterGlow) return;
     
-    const isThrusting = gameState.controls.thrust && gameState.lander.fuel > 0 && !gameState.lander.thrusterMalfunctioning;
+    const isMainThrusting = gameState.controls.thrust && gameState.lander.fuel > 0 && !gameState.lander.thrusterMalfunctioning;
+    const isLeftThrusting = gameState.controls.rotateRight && gameState.lander.fuel > 0 && !gameState.lander.thrusterMalfunctioning;
+    const isRightThrusting = gameState.controls.rotateLeft && gameState.lander.fuel > 0 && !gameState.lander.thrusterMalfunctioning;
     const fuelPercentage = (gameState.lander.fuel / CONFIG.INITIAL_FUEL) * 100;
     
-    // Update flame and glow visibility
-    thrusterFlame.classList.toggle('active', isThrusting);
-    thrusterGlow.classList.toggle('active', isThrusting);
+    // Update main thruster
+    mainThrusterFlame.classList.toggle('active', isMainThrusting);
+    mainThrusterGlow.classList.toggle('active', isMainThrusting);
     
-    // Update fuel state classes
-    thrusterFlame.classList.toggle('low-fuel', fuelPercentage < 30);
-    thrusterFlame.classList.toggle('critical', fuelPercentage < 10);
-    thrusterGlow.classList.toggle('low-fuel', fuelPercentage < 30);
-    thrusterGlow.classList.toggle('critical', fuelPercentage < 10);
+    // Update side thrusters
+    leftThrusterFlame.classList.toggle('active', isLeftThrusting);
+    leftThrusterGlow.classList.toggle('active', isLeftThrusting);
+    rightThrusterFlame.classList.toggle('active', isRightThrusting);
+    rightThrusterGlow.classList.toggle('active', isRightThrusting);
+    
+    // Update fuel state classes for all thrusters
+    const isCritical = fuelPercentage < 10;
+    const isLowFuel = fuelPercentage < 30;
+    
+    [mainThrusterFlame, leftThrusterFlame, rightThrusterFlame].forEach(flame => {
+        if (flame) {
+            flame.classList.toggle('low-fuel', isLowFuel && !isCritical);
+            flame.classList.toggle('critical', isCritical);
+        }
+    });
+    
+    [mainThrusterGlow, leftThrusterGlow, rightThrusterGlow].forEach(glow => {
+        if (glow) {
+            glow.classList.toggle('low-fuel', isLowFuel && !isCritical);
+            glow.classList.toggle('critical', isCritical);
+        }
+    });
     
     // Update flame size based on thrust intensity
-    if (isThrusting) {
-        const thrustIntensity = 1 + (Math.random() * 0.3); // Random variation
-        thrusterFlame.style.transform = `translateX(-50%) scaleY(${thrustIntensity})`;
-        thrusterGlow.style.transform = `translateX(-50%) scaleY(${thrustIntensity * 1.2})`;
+    if (isMainThrusting) {
+        const thrustIntensity = 1 + (Math.random() * 0.3);
+        mainThrusterFlame.style.transform = `translateX(-50%) scaleY(${thrustIntensity})`;
+        mainThrusterGlow.style.transform = `translateX(-50%) scaleY(${thrustIntensity * 1.2})`;
     } else {
-        thrusterFlame.style.transform = 'translateX(-50%)';
-        thrusterGlow.style.transform = 'translateX(-50%)';
+        mainThrusterFlame.style.transform = 'translateX(-50%) scaleY(1)';
+        mainThrusterGlow.style.transform = 'translateX(-50%) scaleY(1)';
     }
 }
 
 function updateLandingGuides() {
-    if (!gameState.game.active || gameState.lander.landed || gameState.lander.crashed) return;
+    if (!gameState.game.active || !DOMElements.landingGuides) return;
     
     const lander = gameState.lander;
     const pad = gameState.game.pad;
@@ -1239,280 +1311,116 @@ function updateLandingGuides() {
     const maxHSpeed = gameState.game.difficultySettings.maxHSpeed;
     
     // Update approach line
-    const approachLine = DOMElements.container.querySelector('.approach-line');
+    const approachLine = DOMElements.landingGuides.querySelector('.approach-line');
     if (approachLine) {
-        const dx = pad.x - lander.x;
-        const dy = pad.y - lander.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        const angle = Math.atan2(dx, dy) * 180 / Math.PI;
+        const distanceToPad = Math.abs(lander.y - pad.y);
+        const speed = Math.sqrt(lander.vx * lander.vx + lander.vy * lander.vy);
         
-        approachLine.style.left = `${lander.x}px`;
-        approachLine.style.top = `${lander.y}px`;
-        approachLine.style.height = `${distance}px`;
-        approachLine.style.transform = `rotate(${angle}deg)`;
-        approachLine.classList.toggle('active', distance < 300);
+        // Show/hide based on distance and speed
+        approachLine.style.display = (distanceToPad < 300 && speed > maxVSpeed * 0.5) ? 'block' : 'none';
+        
+        // Update color based on approach
+        if (approachLine.style.display === 'block') {
+            if (speed > maxVSpeed * 0.8 || Math.abs(lander.vx) > maxHSpeed * 0.8) {
+                approachLine.style.backgroundColor = 'var(--critical-color)';
+            } else if (speed > maxVSpeed * 0.6 || Math.abs(lander.vx) > maxHSpeed * 0.6) {
+                approachLine.style.backgroundColor = 'var(--warning-color)';
+            } else {
+                approachLine.style.backgroundColor = 'var(--good-color)';
+            }
+        }
     }
     
     // Update ideal angle zone
-    const idealAngleZone = DOMElements.container.querySelector('.ideal-angle-zone');
+    const idealAngleZone = DOMElements.landingGuides.querySelector('.ideal-angle-zone');
     if (idealAngleZone) {
-        const idealAngle = 0; // Perfect vertical landing
-        const angleRange = 5; // ±5 degrees
-        const currentAngle = lander.angle % 360;
-        const angleDiff = Math.abs(currentAngle - idealAngle);
+        const currentAngle = Math.abs(lander.angle % 360);
+        const isInIdealRange = currentAngle <= CONFIG.MAX_LANDING_ROTATION;
         
-        idealAngleZone.style.left = `${lander.x}px`;
-        idealAngleZone.style.top = `${lander.y}px`;
-        idealAngleZone.style.height = '200px';
-        idealAngleZone.style.transform = `rotate(${idealAngle}deg)`;
-        idealAngleZone.classList.toggle('active', angleDiff <= angleRange);
+        idealAngleZone.style.display = (Math.abs(lander.y - pad.y) < 200) ? 'block' : 'none';
+        idealAngleZone.style.backgroundColor = isInIdealRange ? 'var(--good-color)' : 'var(--warning-color)';
     }
     
     // Update speed markers
-    const speedMarkers = DOMElements.container.querySelector('.speed-markers');
+    const speedMarkers = DOMElements.landingGuides.querySelector('.speed-markers');
     if (speedMarkers) {
-        // Clear existing markers
-        speedMarkers.innerHTML = '';
+        const vSpeed = Math.abs(lander.vy);
+        const hSpeed = Math.abs(lander.vx);
         
-        // Create markers for current speed vs max safe speed
-        const currentSpeed = Math.sqrt(lander.vx * lander.vx + lander.vy * lander.vy);
-        const speedRatio = currentSpeed / maxVSpeed;
+        speedMarkers.style.display = (Math.abs(lander.y - pad.y) < 200) ? 'block' : 'none';
         
-        // Add marker for current speed
-        const currentMarker = document.createElement('div');
-        currentMarker.className = 'speed-marker';
-        currentMarker.style.left = `${lander.x}px`;
-        currentMarker.style.top = `${lander.y + 100}px`;
-        currentMarker.style.backgroundColor = speedRatio > 0.8 ? 'rgba(255, 0, 0, 0.8)' : 
-                                            speedRatio > 0.5 ? 'rgba(255, 255, 0, 0.8)' : 
-                                            'rgba(0, 255, 0, 0.8)';
-        speedMarkers.appendChild(currentMarker);
+        // Update vertical speed marker
+        const vMarker = speedMarkers.querySelector('.v-speed-marker');
+        if (vMarker) {
+            vMarker.style.backgroundColor = vSpeed <= maxVSpeed ? 'var(--good-color)' : 
+                                          vSpeed <= maxVSpeed * 1.2 ? 'var(--warning-color)' : 
+                                          'var(--critical-color)';
+        }
         
-        // Add text showing speed ratio
-        const speedText = document.createElement('div');
-        speedText.className = 'landing-zone-text';
-        speedText.textContent = `${(speedRatio * 100).toFixed(0)}%`;
-        speedText.style.left = `${lander.x + 10}px`;
-        speedText.style.top = `${lander.y + 95}px`;
-        speedMarkers.appendChild(speedText);
+        // Update horizontal speed marker
+        const hMarker = speedMarkers.querySelector('.h-speed-marker');
+        if (hMarker) {
+            hMarker.style.backgroundColor = hSpeed <= maxHSpeed ? 'var(--good-color)' : 
+                                          hSpeed <= maxHSpeed * 1.2 ? 'var(--warning-color)' : 
+                                          'var(--critical-color)';
+        }
     }
     
     // Update distance markers
-    const distanceMarkers = DOMElements.container.querySelector('.distance-markers');
+    const distanceMarkers = DOMElements.landingGuides.querySelector('.distance-markers');
     if (distanceMarkers) {
-        // Clear existing markers
-        distanceMarkers.innerHTML = '';
+        const distanceToPad = Math.abs(lander.y - pad.y);
+        const padLeft = pad.x - pad.width/2;
+        const padRight = pad.x + pad.width/2;
+        const isOverPad = lander.x >= padLeft && lander.x <= padRight;
         
-        // Create markers at fixed distances
-        const distances = [100, 200, 300];
-        distances.forEach(dist => {
-            const marker = document.createElement('div');
-            marker.className = 'distance-marker';
-            marker.style.left = `${lander.x}px`;
-            marker.style.top = `${lander.y + dist}px`;
-            distanceMarkers.appendChild(marker);
-            
-            // Add distance text
-            const distText = document.createElement('div');
-            distText.className = 'landing-zone-text';
-            distText.textContent = `${dist}m`;
-            distText.style.left = `${lander.x + 10}px`;
-            distText.style.top = `${lander.y + dist - 5}px`;
-            distanceMarkers.appendChild(distText);
-        });
+        distanceMarkers.style.display = (distanceToPad < 300) ? 'block' : 'none';
+        
+        // Update horizontal alignment marker
+        const hAlignMarker = distanceMarkers.querySelector('.h-align-marker');
+        if (hAlignMarker) {
+            hAlignMarker.style.backgroundColor = isOverPad ? 'var(--good-color)' : 'var(--warning-color)';
+        }
+        
+        // Update distance indicator
+        const distanceIndicator = distanceMarkers.querySelector('.distance-indicator');
+        if (distanceIndicator) {
+            const distancePercent = Math.min(100, (distanceToPad / 300) * 100);
+            distanceIndicator.style.height = `${distancePercent}%`;
+            distanceIndicator.style.backgroundColor = distanceToPad <= 100 ? 'var(--good-color)' : 
+                                                   distanceToPad <= 200 ? 'var(--warning-color)' : 
+                                                   'var(--critical-color)';
+        }
     }
 }
 
-function createDustTrail() {
-    if (!gameState.game.active || gameState.lander.landed || gameState.lander.crashed) return;
-    
-    const lander = gameState.lander;
-    const speed = Math.sqrt(lander.vx * lander.vx + lander.vy * lander.vy);
-    
-    // Only create dust trail when moving fast enough
-    if (speed > 2) {
-        const dust = document.createElement('div');
-        dust.className = 'dust-trail';
-        dust.style.left = `${lander.x}px`;
-        dust.style.top = `${lander.y}px`;
-        DOMElements.container.appendChild(dust);
-        
-        // Remove dust particle after animation
-        setTimeout(() => dust.remove(), 1000);
-    }
-}
-
-function createWindGust() {
-    if (!gameState.game.active || gameState.lander.landed || gameState.lander.crashed) return;
-    
-    const wind = document.createElement('div');
-    wind.className = 'wind-gust';
-    wind.style.top = `${Math.random() * 100}%`;
-    DOMElements.container.appendChild(wind);
-    
-    // Remove wind gust after animation
-    setTimeout(() => wind.remove(), 1000);
-}
-
-function createGroundImpact(x, y, intensity = 1) {
-    const impact = document.createElement('div');
-    impact.className = 'ground-impact';
-    impact.style.left = `${x}px`;
-    impact.style.top = `${y}px`;
-    impact.style.transform = `scale(${intensity})`;
-    DOMElements.container.appendChild(impact);
-    
-    // Create dust particles around impact
-    for (let i = 0; i < 5; i++) {
-        const dust = document.createElement('div');
-        dust.className = 'dust-particle';
-        const angle = (Math.PI * 2 * i) / 5;
-        const distance = 10;
-        dust.style.left = `${x + Math.cos(angle) * distance}px`;
-        dust.style.top = `${y + Math.sin(angle) * distance}px`;
-        DOMElements.container.appendChild(dust);
-        
-        // Remove dust particle after animation
-        setTimeout(() => dust.remove(), 1000);
-    }
-    
-    // Remove impact effect after animation
-    setTimeout(() => impact.remove(), 500);
-}
-
-function createCraterEffect(x, y, size = 1) {
-    const crater = document.createElement('div');
-    crater.className = 'crater-effect';
-    crater.style.left = `${x}px`;
-    crater.style.top = `${y}px`;
-    crater.style.transform = `scale(${size})`;
-    DOMElements.container.appendChild(crater);
-    
-    // Create more dust particles for crater
-    for (let i = 0; i < 8; i++) {
-        const dust = document.createElement('div');
-        dust.className = 'dust-particle';
-        const angle = (Math.PI * 2 * i) / 8;
-        const distance = 15;
-        dust.style.left = `${x + Math.cos(angle) * distance}px`;
-        dust.style.top = `${y + Math.sin(angle) * distance}px`;
-        DOMElements.container.appendChild(dust);
-        
-        // Remove dust particle after animation
-        setTimeout(() => dust.remove(), 1000);
-    }
-    
-    // Remove crater effect after animation
-    setTimeout(() => crater.remove(), 800);
-}
-
-// Update the gameLoop function to include environmental effects
 function gameLoop(timestamp) {
     if (!gameState.game.active) return;
-    if(gameState.game.paused) {
+    if(gameState.game.paused) { // Handle pause state
         gameLoopHandle = requestAnimationFrame(gameLoop);
         return;
     }
     if (!gameState.game.startTime) gameState.game.startTime = timestamp;
     if (!gameState.game.lastFrameTime) gameState.game.lastFrameTime = timestamp;
-    gameState.game.deltaTime = Math.max(1, timestamp - gameState.game.lastFrameTime);
+    gameState.game.deltaTime = Math.max(1, timestamp - gameState.game.lastFrameTime); // Calculate delta time, ensure minimum
     gameState.game.lastFrameTime = timestamp;
 
-    try {
+    try { // Wrap core logic in try-catch for robustness
         updatePhysics(gameState.game.deltaTime);
         checkCollisions();
         updateParticles(gameState.game.deltaTime);
         updateParallax();
         updateUI();
-        updateLandingGuides();
-        createDustTrail(); // Add dust trail
-        if (Math.random() < 0.01) createWindGust(); // Random wind gusts
+        updateLandingGuides(); // Add this line
     } catch (error) {
         console.error("Critical Error in Game Loop:", error);
-        gameState.game.active = false;
+        gameState.game.active = false; // Stop game on critical error
         alert("A critical game error occurred. Please check the console.");
-        endGame(false, "Critical game error!");
+        endGame(false, "Critical game error!"); // End game gracefully
         return;
     }
 
-    if (gameState.game.active) {
+    if (gameState.game.active) { // Request next frame if game is still active
         gameLoopHandle = requestAnimationFrame(gameLoop);
-    }
-}
-
-// Update the checkCollisions function to include impact effects
-function checkCollisions() {
-    if (gameState.lander.landed || gameState.lander.crashed) return;
-
-    // Simplified lander bounds calculation (could be more precise using rotated corners)
-    const angleRad=degToRad(gameState.lander.angle), cosA=Math.cos(angleRad), sinA=Math.sin(angleRad), halfW=gameState.lander.width/2, halfH=gameState.lander.height/2; const corners=[{x:-halfW,y:halfH},{x:halfW,y:halfH},{x:-halfW,y:-halfH},{x:halfW,y:-halfH}]; const worldCorners=corners.map(c=>({x:gameState.lander.x+(c.x*cosA-c.y*sinA),y:gameState.lander.y+(c.x*sinA+c.y*cosA)})); const landerBottomY=Math.max(...worldCorners.map(c=>c.y)), landerTopY=Math.min(...worldCorners.map(c=>c.y)), landerLeftX=Math.min(...worldCorners.map(c=>c.x)), landerRightX=Math.max(...worldCorners.map(c=>c.x));
-
-    const impactVSpeed = gameState.lander.vy;
-    const impactHSpeed = gameState.lander.vx;
-    let impactAngle = gameState.lander.angle % 360; if(impactAngle>180)impactAngle-=360; if(impactAngle<-180)impactAngle+=360; const impactRotation = Math.abs(impactAngle);
-
-    // Surface collision
-    if(landerBottomY >= gameState.game.surfaceY){
-        gameState.lander.y -= (landerBottomY - gameState.game.surfaceY); // Correct position
-
-        const padLeft=gameState.game.pad.x-gameState.game.pad.width/2, padRight=gameState.game.pad.x+gameState.game.pad.width/2;
-        const overlapsPadHorizontally=landerRightX > padLeft && landerLeftX < padRight;
-
-        const maxV = gameState.game.difficultySettings.maxVSpeed;
-        const maxH = gameState.game.difficultySettings.maxHSpeed;
-        const maxRot = CONFIG.MAX_LANDING_ROTATION;
-
-        // Check landing conditions
-        if(overlapsPadHorizontally && impactVSpeed <= maxV && Math.abs(impactHSpeed) <= maxH && impactRotation <= maxRot){
-            gameState.lander.landed = true;
-            gameState.lander.vy = 0; gameState.lander.vx = 0; gameState.lander.angle = 0; // Stabilize
-            gameState.lander.y = gameState.game.surfaceY - gameState.lander.height / 2; // Set final position
-            createDust(gameState.lander.x, gameState.game.surfaceY); // Visual effect
-            // Landing sounds
-            if(impactVSpeed < maxV * 0.5 && gameState.sounds['land_soft']) playSound('land_soft',false,0.7); else if(gameState.sounds['land_hard']) playSound('land_hard',false,0.7); else if(gameState.sounds['land_soft']) playSound('land_soft',false,0.7);
-            playSound('success',false,0.8);
-            endGame(true, "", { impactVSpeed, impactHSpeed, impactRotation }); // Pass impact data for scoring
-        } else {
-            // Crash
-            gameState.lander.crashed = true;
-            createExplosion(gameState.lander.x, gameState.game.surfaceY);
-            DOMElements.lander?.style.setProperty('display','none'); // Hide lander element from index.html
-            let reason = "Crashed!";
-            if (!overlapsPadHorizontally) reason = "Missed the pad!";
-            else if (impactVSpeed > maxV) reason = `Too fast vertically! (${(impactVSpeed * CONFIG.SPEED_DISPLAY_FACTOR).toFixed(1)} > ${(maxV*CONFIG.SPEED_DISPLAY_FACTOR).toFixed(1)} m/s)`;
-            else if (Math.abs(impactHSpeed) > maxH) reason = `Too fast horizontally! (${(Math.abs(impactHSpeed)*CONFIG.SPEED_DISPLAY_FACTOR).toFixed(1)} > ${(maxH*CONFIG.SPEED_DISPLAY_FACTOR).toFixed(1)} m/s)`;
-            else if (impactRotation > maxRot) reason = `Tilted too much! (${impactRotation.toFixed(0)} > ${maxRot} deg)`;
-            else reason = "Bad landing!";
-            endGame(false, reason);
-        }
-        return; // Collision handled
-    }
-
-    // Obstacle collision
-    const landerRect={left:landerLeftX,right:landerRightX,top:landerTopY,bottom:landerBottomY};
-    for(const obs of gameState.obstacles){
-        const obsRect={left:obs.x,right:obs.x+obs.width,top:obs.y,bottom:obs.y+obs.height};
-        // Basic AABB collision check
-        if(landerRect.right > obsRect.left && landerRect.left < obsRect.right &&
-           landerRect.bottom > obsRect.top && landerRect.top < obsRect.bottom)
-        {
-            gameState.lander.crashed = true;
-            createExplosion((landerRect.left + landerRect.right)/2, (landerRect.top + landerRect.bottom)/2);
-            DOMElements.lander?.style.setProperty('display','none'); // Hide lander
-            endGame(false,"Collided with an obstacle!");
-            return; // Collision handled
-        }
-    }
-
-    // Add near-miss detection
-    if (!gameState.lander.crashed && !gameState.lander.landed) {
-        const distanceToPad = Math.abs(gameState.lander.y - gameState.game.pad.y);
-        const speed = Math.sqrt(gameState.lander.vx * gameState.lander.vx + gameState.lander.vy * gameState.lander.vy);
-        
-        if (distanceToPad < 100 && speed > CONFIG.MAX_LANDING_SPEED * 0.8) {
-            applyScreenShake();
-            gameState.game.nearMissStreak++;
-            // ... rest of near-miss handling ...
-        }
     }
 }

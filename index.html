@@ -8,7 +8,7 @@
 </head>
 <body>
     <div id="game-wrapper">
-        <div id="game-container">
+    <div id="game-container">
             <div class="danger-border"></div>
             <div class="speed-lines"></div>
             <div class="near-miss-flash"></div>
@@ -16,18 +16,18 @@
             <div id="stars-bg"></div>
             <div id="stars-mg"></div>
             <div id="stars-fg"></div>
-            <div id="earth"></div>
-            <div id="moon-surface"></div>
-            <div id="landing-pad"></div>
+        <div id="earth"></div>
+        <div id="moon-surface"></div>
+        <div id="landing-pad"></div>
             <div id="landing-guides">
                 <div class="landing-guide approach-line"></div>
                 <div class="landing-guide ideal-angle-zone"></div>
                 <div class="landing-guide speed-markers"></div>
                 <div class="landing-guide distance-markers"></div>
             </div>
-
-            <div id="lander">
-                 <svg id="lander-img" viewBox="0 0 100 150" xmlns="http://www.w3.org/2000/svg">
+        
+        <div id="lander">
+            <svg id="lander-img" viewBox="0 0 100 150" xmlns="http://www.w3.org/2000/svg">
                      <path d="M25 20 L50 10 L75 20 L85 80 L15 80 Z" class="lander-main"/>
                      <circle cx="50" cy="35" r="10" class="window" />
                      <path d="M25 80 L15 120" class="legs leg-left" />
@@ -35,17 +35,23 @@
                      <path d="M10 120 L20 120" class="legs foot-left"/>
                      <path d="M80 120 L90 120" class="legs foot-right"/>
                      <rect x="40" y="75" width="20" height="10" class="thruster-nozzle"/>
+                     <rect x="15" y="40" width="10" height="8" class="thruster-nozzle side-nozzle-left"/>
+                     <rect x="75" y="40" width="10" height="8" class="thruster-nozzle side-nozzle-right"/>
 
                      <g id="damage-elements">
                          <path d="M45 30 l5 8 l-6 2 l3 -7" class="damage-crack window-crack" />
                          <path d="M51 36 l5 -3 l-1 6 l-3 -1" class="damage-crack window-crack" />
                          <path d="M20 100 l-3 5 l4 -1 Z" class="damage-bent-leg leg-damage" />
                      </g>
-                 </svg>
+            </svg>
                 <div class="thruster-glow"></div>
                 <div class="thruster-flame"></div>
-            </div>
-            <div id="dashboard">
+                <div class="side-thruster-glow left"></div>
+                <div class="side-thruster-flame left"></div>
+                <div class="side-thruster-glow right"></div>
+                <div class="side-thruster-flame right"></div>
+        </div>
+        <div id="dashboard">
                 <h3 id="dashboard-title">MISSION STATUS</h3>
                 <div class="dashboard-item">
                     <span class="dashboard-label">ALT:</span><span id="altitude" class="dashboard-value good">0 m</span>
@@ -53,16 +59,16 @@
                 <div class="dashboard-item">
                     <span class="dashboard-label">V SPD:</span><span id="vertical-speed" class="dashboard-value good">0.0 m/s</span>
                 </div>
-                <div class="dashboard-item">
+            <div class="dashboard-item">
                     <span class="dashboard-label">H SPD:</span><span id="horizontal-speed" class="dashboard-value good">0.0 m/s</span>
-                </div>
-                <div class="dashboard-item">
+            </div>
+            <div class="dashboard-item">
                     <span class="dashboard-label">ROT:</span><span id="rotation" class="dashboard-value good">0 deg</span>
-                </div>
-                 <div class="dashboard-item">
+            </div>
+            <div class="dashboard-item">
                     <span class="dashboard-label">FUEL:</span><div id="fuel-bar"><div id="fuel-level"></div></div>
-                </div>
-                <div class="dashboard-item">
+            </div>
+            <div class="dashboard-item">
                     <span class="dashboard-label">DEST:</span><span id="planet-display" class="dashboard-value">???</span>
                 </div>
             </div>
@@ -70,16 +76,16 @@
              <div id="highscore-display">
                 <h3>HIGH SCORES</h3>
                 <ol id="highscore-list"></ol>
-            </div>
-
+        </div>
+        
             <div id="controls-info">
                 Controls: <span>&uarr;</span> Thrust | <span>&larr;</span> Rotate Left | <span>&rarr;</span> Rotate Right | <span>P</span> Pause
-            </div>
-
         </div>
-
+        
+        </div>
+        
          <div id="message-overlay">
-            <div id="message-container">
+        <div id="message-container">
                 <div id="message-title">Mission Result</div>
                 <div id="message-text">Landing details...</div>
                 <div id="message-score">Score: 0</div>
@@ -99,7 +105,7 @@
                 <div id="planet-list"></div>
             </div>
              <button id="start-game-btn" class="btn">Attempt Mission</button>
-         </div>
+    </div>
 
          </div>
 
