@@ -381,49 +381,38 @@ function updatePhysics(deltaTime) {
     const dt = clamp(deltaTime / 16.667, 0.1, 5);
     const difficulty = gameState.game.difficultySettings;
 
-    // Malfunctions (fuel leak, thruster)
-    if (!gameState.lander.fuelLeaking && Math.random() < difficulty.fuelLeakChance * dt) {
-        console.warn("Fuel leak started!");
-        gameState.lander.fuelLeaking = true;
-        // Could potentially add visual cue here, e.g., add 'damaged' class to #damage-elements
-    }
-    if (!gameState.lander.thrusterMalfunctioning && Math.random() < difficulty.thrusterMalfunctionChance * dt) {
-        console.warn("Thruster malfunction!");
-        gameState.lander.thrusterMalfunctioning = true;
-        gameState.lander.thrusterMalfunctionTimer = 2000 + Math.random() * 3000;
-        gameState.controls.thrust = false;
-        stopSound('thrust');
-        // Could potentially add visual cue here
-    }
-    if (gameState.lander.thrusterMalfunctioning) {
-        gameState.lander.thrusterMalfunctionTimer -= deltaTime;
-        if (gameState.lander.thrusterMalfunctionTimer <= 0) {
-            console.log("Thruster repaired.");
-            gameState.lander.thrusterMalfunctioning = false;
-        }
-    }
-
-    // Rotation
+    // Rotation and Side Thrust
     let rotationAmount = 0;
+    const SIDE_THRUST_POWER = CONFIG.THRUST_POWER * 0.4; // Side thrusters are 40% as powerful as main
+    
     if (gameState.controls.rotateLeft && gameState.lander.fuel > 0) {
         rotationAmount = -CONFIG.ROTATION_SPEED * dt;
         gameState.lander.fuel -= CONFIG.FUEL_CONSUMPTION_ROTATE * dt;
+        // Add horizontal movement for left rotation
+        gameState.lander.vx -= SIDE_THRUST_POWER * dt;
+        if (!gameState.sounds.thrust?.source) playSound('thrust', true, 0.3);
     }
     if (gameState.controls.rotateRight && gameState.lander.fuel > 0) {
         rotationAmount = CONFIG.ROTATION_SPEED * dt;
         gameState.lander.fuel -= CONFIG.FUEL_CONSUMPTION_ROTATE * dt;
+        // Add horizontal movement for right rotation
+        gameState.lander.vx += SIDE_THRUST_POWER * dt;
+        if (!gameState.sounds.thrust?.source) playSound('thrust', true, 0.3);
     }
+    if (!gameState.controls.rotateLeft && !gameState.controls.rotateRight && !gameState.controls.thrust) {
+        stopSound('thrust');
+    }
+    
     gameState.lander.angle = (gameState.lander.angle + rotationAmount) % 360;
 
-    // Thrust
+    // Main Thrust
     if (gameState.controls.thrust && gameState.lander.fuel > 0 && !gameState.lander.thrusterMalfunctioning) {
         const angleRad = degToRad(gameState.lander.angle);
         gameState.lander.vx += Math.sin(angleRad) * CONFIG.THRUST_POWER * dt;
         gameState.lander.vy -= Math.cos(angleRad) * CONFIG.THRUST_POWER * dt;
         gameState.lander.fuel -= CONFIG.FUEL_CONSUMPTION_THRUST * dt;
+        if (!gameState.sounds.thrust?.source) playSound('thrust', true, 0.5);
         createThrustParticles();
-    } else if (!gameState.controls.thrust || gameState.lander.thrusterMalfunctioning) {
-        stopSound('thrust');
     }
 
     // Gravity & Wind
@@ -1316,7 +1305,7 @@ function updateThrusterEffects() {
     const isRightThrusting = gameState.controls.rotateLeft && gameState.lander.fuel > 0 && !gameState.lander.thrusterMalfunctioning;
     const fuelPercentage = (gameState.lander.fuel / CONFIG.INITIAL_FUEL) * 100;
     
-    // Update main thruster
+    // Update main thruster with corrected positioning
     mainThrusterFlame.classList.toggle('active', isMainThrusting);
     mainThrusterGlow.classList.toggle('active', isMainThrusting);
     
@@ -1344,14 +1333,26 @@ function updateThrusterEffects() {
         }
     });
     
-    // Update flame size based on thrust intensity
+    // Update flame size based on thrust intensity with corrected positioning
     if (isMainThrusting) {
         const thrustIntensity = 1 + (Math.random() * 0.3);
-        mainThrusterFlame.style.transform = `translateX(-50%) scaleY(${thrustIntensity})`;
-        mainThrusterGlow.style.transform = `translateX(-50%) scaleY(${thrustIntensity * 1.2})`;
+        mainThrusterFlame.style.transform = `translate(-50%, 100%) scaleY(${thrustIntensity})`;
+        mainThrusterGlow.style.transform = `translate(-50%, 100%) scaleY(${thrustIntensity * 1.2})`;
     } else {
-        mainThrusterFlame.style.transform = 'translateX(-50%) scaleY(1)';
-        mainThrusterGlow.style.transform = 'translateX(-50%) scaleY(1)';
+        mainThrusterFlame.style.transform = 'translate(-50%, 100%) scaleY(1)';
+        mainThrusterGlow.style.transform = 'translate(-50%, 100%) scaleY(1)';
+    }
+    
+    // Update side thruster effects with proper positioning
+    if (isLeftThrusting) {
+        const intensity = 1 + (Math.random() * 0.2);
+        leftThrusterFlame.style.transform = `translate(-100%, -50%) scaleX(${intensity})`;
+        leftThrusterGlow.style.transform = `translate(-100%, -50%) scaleX(${intensity * 1.2})`;
+    }
+    if (isRightThrusting) {
+        const intensity = 1 + (Math.random() * 0.2);
+        rightThrusterFlame.style.transform = `translate(0%, -50%) scaleX(${intensity})`;
+        rightThrusterGlow.style.transform = `translate(0%, -50%) scaleX(${intensity * 1.2})`;
     }
 }
 
