@@ -121,8 +121,8 @@ function initAudio() {
     try {
         gameState.audioContext = new (window.AudioContext || window.webkitAudioContext)();
         console.log("AudioContext initialized.");
-        // Sound files can be extended based on needs
-        const soundsToLoad = { 'thrust': 'sounds/thrust.ogg', 'explosion': 'sounds/explosion.mp3', 'land_soft': 'sounds/land_soft.wav', 'land_hard': 'sounds/land_hard.wav', 'success': 'sounds/success.wav', 'low_fuel': 'sounds/low_fuel.wav', 'click': 'sounds/click.wav', 'rotate': 'sounds/rotate.wav', /* 'win_fanfare': 'sounds/win.mp3' */};
+        // Only load thrust and explosion sounds
+        const soundsToLoad = { 'thrust': 'sounds/thrust.ogg', 'explosion': 'sounds/explosion.mp3' };
         for (const name in soundsToLoad) loadSound(name, soundsToLoad[name]);
     } catch (e) { console.error("Web Audio API not supported", e); }
 }
@@ -428,7 +428,7 @@ function updateParallax() { const dx = gameState.lander.x - gameState.game.width
 function applyParallax(container, dx, dy, factor) { const px = (dx / gameState.game.width) * factor * 50; const py = (dy / gameState.game.height) * factor * 50; container.style.transform = `translate(${-px}%, ${-py}%)`; }
 
 // --- Input Handling ---
-function handleKeyDown(e) { if(e.key.toLowerCase() === 'p' && gameState.game.startTime > 0) { togglePause(); e.preventDefault(); return; } if (!gameState.game.active || gameState.game.paused) { if (e.key === 'Enter' && !gameState.game.active && DOMElements.startScreen?.style.display !== 'none') { playSound('click'); startGame(); e.preventDefault(); } return; } let action = false; switch (e.key) { case 'ArrowUp': case ' ': if (!gameState.controls.thrust && !gameState.lander.thrusterMalfunctioning) { gameState.controls.thrust = true; playSound('thrust', true, 0.5); } action = true; break; case 'ArrowLeft': if (!gameState.controls.rotateLeft) { gameState.controls.rotateLeft = true; playSound('rotate', false, 0.3); } action = true; break; case 'ArrowRight': if (!gameState.controls.rotateRight) { gameState.controls.rotateRight = true; playSound('rotate', false, 0.3); } action = true; break; } if (action || ['ArrowDown'].includes(e.key)) e.preventDefault(); }
+function handleKeyDown(e) { if(e.key.toLowerCase() === 'p' && gameState.game.startTime > 0) { togglePause(); e.preventDefault(); return; } if (!gameState.game.active || gameState.game.paused) { if (e.key === 'Enter' && !gameState.game.active && DOMElements.startScreen?.style.display !== 'none') { startGame(); e.preventDefault(); } return; } let action = false; switch (e.key) { case 'ArrowUp': case ' ': if (!gameState.controls.thrust && !gameState.lander.thrusterMalfunctioning) { gameState.controls.thrust = true; playSound('thrust', true, 0.5); } action = true; break; case 'ArrowLeft': if (!gameState.controls.rotateLeft) { gameState.controls.rotateLeft = true; } action = true; break; case 'ArrowRight': if (!gameState.controls.rotateRight) { gameState.controls.rotateRight = true; } action = true; break; } if (action || ['ArrowDown'].includes(e.key)) e.preventDefault(); }
 function handleKeyUp(e) { switch (e.key) { case 'ArrowUp': case ' ': if (gameState.controls.thrust) stopSound('thrust'); gameState.controls.thrust = false; break; case 'ArrowLeft': gameState.controls.rotateLeft = false; break; case 'ArrowRight': gameState.controls.rotateRight = false; break; } }
 function togglePause() {
     if (gameState.game.startTime === 0 || gameState.lander.crashed || gameState.lander.landed) return;
@@ -552,7 +552,7 @@ function checkCollisions() {
 
     // Surface collision
     if(landerBottomY >= gameState.game.surfaceY){
-        gameState.lander.y -= (landerBottomY - gameState.game.surfaceY); // Correct position
+        gameState.lander.y -= (landerBottomY - gameState.game.surfaceY);
 
         const padLeft=gameState.game.pad.x-gameState.game.pad.width/2, padRight=gameState.game.pad.x+gameState.game.pad.width/2;
         const overlapsPadHorizontally=landerRightX > padLeft && landerLeftX < padRight;
@@ -564,18 +564,14 @@ function checkCollisions() {
         // Check landing conditions
         if(overlapsPadHorizontally && impactVSpeed <= maxV && Math.abs(impactHSpeed) <= maxH && impactRotation <= maxRot){
             gameState.lander.landed = true;
-            gameState.lander.vy = 0; gameState.lander.vx = 0; gameState.lander.angle = 0; // Stabilize
-            gameState.lander.y = gameState.game.surfaceY - gameState.lander.height / 2; // Set final position
-            createDust(gameState.lander.x, gameState.game.surfaceY); // Visual effect
-            // Landing sounds
-            if(impactVSpeed < maxV * 0.5 && gameState.sounds['land_soft']) playSound('land_soft',false,0.7); else if(gameState.sounds['land_hard']) playSound('land_hard',false,0.7); else if(gameState.sounds['land_soft']) playSound('land_soft',false,0.7);
-            playSound('success',false,0.8);
-            endGame(true, "", { impactVSpeed, impactHSpeed, impactRotation }); // Pass impact data for scoring
+            gameState.lander.vy = 0; gameState.lander.vx = 0; gameState.lander.angle = 0;
+            gameState.lander.y = gameState.game.surfaceY - gameState.lander.height / 2;
+            createDust(gameState.lander.x, gameState.game.surfaceY);
+            endGame(true, "", { impactVSpeed, impactHSpeed, impactRotation });
         } else {
-            // Crash
             gameState.lander.crashed = true;
             createExplosion(gameState.lander.x, gameState.game.surfaceY);
-            DOMElements.lander?.style.setProperty('display','none'); // Hide lander element from index.html
+            DOMElements.lander?.style.setProperty('display','none');
             let reason = "Crashed!";
             if (!overlapsPadHorizontally) reason = "Missed the pad!";
             else if (impactVSpeed > maxV) reason = `Too fast vertically! (${(impactVSpeed * CONFIG.SPEED_DISPLAY_FACTOR).toFixed(1)} > ${(maxV*CONFIG.SPEED_DISPLAY_FACTOR).toFixed(1)} m/s)`;
@@ -584,7 +580,7 @@ function checkCollisions() {
             else reason = "Bad landing!";
             endGame(false, reason);
         }
-        return; // Collision handled
+        return;
     }
 
     // Obstacle collision
@@ -838,7 +834,6 @@ function endGame(success, message = "", impactData = null) { // Added impactData
 
 // Function to proceed to the next planet
 function goToNextPlanet() {
-    playSound('click');
     gameState.game.currentPlanetIndex = (gameState.game.currentPlanetIndex + 1) % PLANETS.length; // Move to next planet index
     saveCompletionStatus(); // Save progress
 
@@ -870,7 +865,6 @@ function goToNextPlanet() {
 
 // Function to restart the current mission
 function restartMission() {
-    playSound('click');
     // Reset UI
     if (DOMElements.messageOverlay) DOMElements.messageOverlay.style.display = 'none';
     if (DOMElements.lander) DOMElements.lander.style.display = 'block';
@@ -901,8 +895,6 @@ function restartMission() {
 // Function to return to the main menu (start screen from index.html)
 function goToMainMenu() {
     console.log("Returning to Main Menu...");
-    playSound('click');
-    // Stop game
     gameState.game.active = false;
     gameState.game.paused = false;
     cancelAnimationFrame(gameLoopHandle);
