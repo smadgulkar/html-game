@@ -45,6 +45,7 @@ body {
     align-items: center;
     min-height: 100vh;
     width: 100vw;
+    overscroll-behavior: none;
 }
 
 #game-wrapper {
@@ -1240,4 +1241,134 @@ body {
 
 .side-thruster-flame.active.right {
     animation: sideThrusterPulse 0.1s ease-in-out infinite reverse;
+}
+
+/* Mobile Controls */
+.mobile-controls {
+    display: none; /* Hidden by default, shown on mobile */
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    width: 100%;
+    max-width: 300px;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+.control-row {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin: 10px 0;
+}
+
+.control-btn {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: rgba(52, 152, 219, 0.8);
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition: all 0.2s ease;
+    box-shadow: 0 0 15px rgba(52, 152, 219, 0.4);
+}
+
+.control-btn:active {
+    background: rgba(52, 152, 219, 1);
+    transform: scale(0.95);
+}
+
+.thrust-btn {
+    background: rgba(46, 204, 113, 0.8);
+    box-shadow: 0 0 15px rgba(46, 204, 113, 0.4);
+}
+
+.thrust-btn:active {
+    background: rgba(46, 204, 113, 1);
+}
+
+/* Mobile Responsive Adjustments */
+@media (max-width: 768px) {
+    .mobile-controls {
+        display: block;
+    }
+
+    #dashboard {
+        top: 5px;
+        left: 5px;
+        padding: 10px;
+        min-width: 150px;
+    }
+
+    .dashboard-item {
+        margin-bottom: 5px;
+    }
+
+    .dashboard-label {
+        font-size: 12px;
+    }
+
+    .dashboard-value {
+        font-size: 12px;
+        min-width: 60px;
+    }
+
+    #controls-info {
+        display: none; /* Hide keyboard controls on mobile */
+    }
+
+    #message-container {
+        padding: 15px;
+        min-width: 250px;
+    }
+
+    #message-title {
+        font-size: 20px;
+    }
+
+    #message-text {
+        font-size: 14px;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        font-size: 14px;
+        margin: 5px;
+    }
+
+    #start-screen h1 {
+        font-size: 36px;
+    }
+
+    #start-screen p {
+        font-size: 14px;
+        padding: 0 20px;
+    }
+
+    #highscore-display {
+        top: 5px;
+        right: 5px;
+        padding: 10px;
+    }
+
+    #highscore-display h3 {
+        font-size: 14px;
+    }
+
+    #highscore-list {
+        font-size: 12px;
+    }
+}
+
+/* Prevent text selection on mobile */
+* {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
 }

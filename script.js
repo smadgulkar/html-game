@@ -895,7 +895,7 @@ function loadCompletionStatus() {
 // Gets all necessary DOM element references from index.html
 function initGame() {
     console.log("Initializing IMPOSSIBLE Lander...");
-     DOMElements = {
+    DOMElements = {
         wrapper: $('#game-wrapper'), container: $('#game-container'), lander: $('#lander'),
         landerImg: $('#lander-img'), altitude: $('#altitude'), vSpeed: $('#vertical-speed'),
         hSpeed: $('#horizontal-speed'), rotation: $('#rotation'), fuelLevel: $('#fuel-level'),
@@ -928,7 +928,11 @@ function initGame() {
         idealAngleZone: $('.ideal-angle-zone'),
         speedMarkers: $('.speed-markers'),
         distanceMarkers: $('.distance-markers'),
-     };
+        mobileControls: $('#mobile-controls'),
+        rotateLeftBtn: $('#rotate-left-btn'),
+        rotateRightBtn: $('#rotate-right-btn'),
+        thrustBtn: $('#thrust-btn'),
+    };
 
     // Check if essential elements are loaded
     if (!DOMElements.container || !DOMElements.lander || !DOMElements.surface || !DOMElements.startScreen) {
@@ -981,6 +985,55 @@ function initGame() {
     if(DOMElements.planetProgression) DOMElements.planetProgression.style.display = gameState.game.initialLevelCompleted ? 'block' : 'none';
     displayHighScores(); // Show scores on start screen
     displayPlanetProgression(); // Show planet progress on start screen
+
+    // Add mobile control event listeners
+    if (DOMElements.rotateLeftBtn) {
+        DOMElements.rotateLeftBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            gameState.controls.rotateLeft = true;
+            playSound('rotate', false, 0.3);
+        });
+        DOMElements.rotateLeftBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            gameState.controls.rotateLeft = false;
+        });
+    }
+
+    if (DOMElements.rotateRightBtn) {
+        DOMElements.rotateRightBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            gameState.controls.rotateRight = true;
+            playSound('rotate', false, 0.3);
+        });
+        DOMElements.rotateRightBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            gameState.controls.rotateRight = false;
+        });
+    }
+
+    if (DOMElements.thrustBtn) {
+        DOMElements.thrustBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (!gameState.controls.thrust && !gameState.lander.thrusterMalfunctioning) {
+                gameState.controls.thrust = true;
+                playSound('thrust', true, 0.5);
+            }
+        });
+        DOMElements.thrustBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            if (gameState.controls.thrust) {
+                stopSound('thrust');
+                gameState.controls.thrust = false;
+            }
+        });
+    }
+
+    // Add touch event prevention for game container
+    if (DOMElements.container) {
+        DOMElements.container.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+        }, { passive: false });
+    }
 
     console.log("Initialization complete. Ready to attempt mission.");
 }
@@ -1424,3 +1477,15 @@ function gameLoop(timestamp) {
         gameLoopHandle = requestAnimationFrame(gameLoop);
     }
 }
+
+// Add mobile-specific pause handling
+function handlePause(e) {
+    if (e.type === 'touchstart') {
+        e.preventDefault();
+    }
+    togglePause();
+}
+
+// Update pause event listener to handle both click and touch
+document.addEventListener('click', handlePause);
+document.addEventListener('touchstart', handlePause);
