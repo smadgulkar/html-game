@@ -1058,11 +1058,13 @@ function initGame() {
     if (DOMElements.rotateLeftBtn) {
         DOMElements.rotateLeftBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();
+            e.stopPropagation(); // Prevent event from bubbling up
             gameState.controls.rotateLeft = true;
             playSound('rotate', false, 0.3);
         });
         DOMElements.rotateLeftBtn.addEventListener('touchend', (e) => {
             e.preventDefault();
+            e.stopPropagation(); // Prevent event from bubbling up
             gameState.controls.rotateLeft = false;
         });
     }
@@ -1070,11 +1072,13 @@ function initGame() {
     if (DOMElements.rotateRightBtn) {
         DOMElements.rotateRightBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();
+            e.stopPropagation(); // Prevent event from bubbling up
             gameState.controls.rotateRight = true;
             playSound('rotate', false, 0.3);
         });
         DOMElements.rotateRightBtn.addEventListener('touchend', (e) => {
             e.preventDefault();
+            e.stopPropagation(); // Prevent event from bubbling up
             gameState.controls.rotateRight = false;
         });
     }
@@ -1082,6 +1086,7 @@ function initGame() {
     if (DOMElements.thrustBtn) {
         DOMElements.thrustBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();
+            e.stopPropagation(); // Prevent event from bubbling up
             if (!gameState.controls.thrust && !gameState.lander.thrusterMalfunctioning) {
                 gameState.controls.thrust = true;
                 playSound('thrust', true, 0.5);
@@ -1089,6 +1094,7 @@ function initGame() {
         });
         DOMElements.thrustBtn.addEventListener('touchend', (e) => {
             e.preventDefault();
+            e.stopPropagation(); // Prevent event from bubbling up
             if (gameState.controls.thrust) {
                 stopSound('thrust');
                 gameState.controls.thrust = false;
@@ -1096,11 +1102,14 @@ function initGame() {
         });
     }
 
-    // Add touch event prevention for game container
+    // Remove old event listeners and add new ones
+    document.removeEventListener('click', handlePause);
+    document.removeEventListener('touchstart', handlePause);
+
+    // Add event listeners only to game container
     if (DOMElements.container) {
-        DOMElements.container.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-        }, { passive: false });
+        DOMElements.container.addEventListener('click', handlePause);
+        DOMElements.container.addEventListener('touchstart', handlePause);
     }
 
     console.log("Initialization complete. Ready to attempt mission.");
@@ -1560,12 +1569,80 @@ function gameLoop(timestamp) {
 
 // Add mobile-specific pause handling
 function handlePause(e) {
-    if (e.type === 'touchstart') {
-        e.preventDefault();
+    // Don't pause if clicking/touching controls or UI elements
+    if (e.target.closest('.mobile-controls') || 
+        e.target.closest('#dashboard') || 
+        e.target.closest('#controls-info') ||
+        e.target.closest('#message-container') ||
+        e.target.closest('#start-screen')) {
+        return;
     }
-    togglePause();
+
+    // For touch events, prevent default only for game container touches
+    if (e.type === 'touchstart' && e.target.closest('#game-container')) {
+        e.preventDefault();
+        togglePause();
+    }
+    // For mouse clicks, only pause if clicking directly on game container
+    else if (e.type === 'click' && e.target.closest('#game-container')) {
+        togglePause();
+    }
 }
 
-// Update pause event listener to handle both click and touch
-document.addEventListener('click', handlePause);
-document.addEventListener('touchstart', handlePause);
+// Update mobile control event listeners
+if (DOMElements.rotateLeftBtn) {
+    DOMElements.rotateLeftBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        e.stopPropagation(); // Prevent event from bubbling up
+        gameState.controls.rotateLeft = true;
+        playSound('rotate', false, 0.3);
+    });
+    DOMElements.rotateLeftBtn.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        e.stopPropagation(); // Prevent event from bubbling up
+        gameState.controls.rotateLeft = false;
+    });
+}
+
+if (DOMElements.rotateRightBtn) {
+    DOMElements.rotateRightBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        e.stopPropagation(); // Prevent event from bubbling up
+        gameState.controls.rotateRight = true;
+        playSound('rotate', false, 0.3);
+    });
+    DOMElements.rotateRightBtn.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        e.stopPropagation(); // Prevent event from bubbling up
+        gameState.controls.rotateRight = false;
+    });
+}
+
+if (DOMElements.thrustBtn) {
+    DOMElements.thrustBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        e.stopPropagation(); // Prevent event from bubbling up
+        if (!gameState.controls.thrust && !gameState.lander.thrusterMalfunctioning) {
+            gameState.controls.thrust = true;
+            playSound('thrust', true, 0.5);
+        }
+    });
+    DOMElements.thrustBtn.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        e.stopPropagation(); // Prevent event from bubbling up
+        if (gameState.controls.thrust) {
+            stopSound('thrust');
+            gameState.controls.thrust = false;
+        }
+    });
+}
+
+// Remove old event listeners and add new ones
+document.removeEventListener('click', handlePause);
+document.removeEventListener('touchstart', handlePause);
+
+// Add event listeners only to game container
+if (DOMElements.container) {
+    DOMElements.container.addEventListener('click', handlePause);
+    DOMElements.container.addEventListener('touchstart', handlePause);
+}
