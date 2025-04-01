@@ -11,7 +11,7 @@ const clamp = (val, min, max) => Math.max(min, Math.min(val, max));
 const CONFIG = {
     GRAVITY_BASE: 0.00162,
     THRUST_POWER: 0.0045,
-    ROTATION_SPEED: 0.16,
+    ROTATION_SPEED: 0.08, // Reduced from 0.16 to make rotation less dominant
     FUEL_CONSUMPTION_THRUST: 0.18,
     FUEL_CONSUMPTION_ROTATE: 0.04,
     MAX_LANDING_ROTATION: 5,
@@ -462,7 +462,7 @@ function updatePhysics(deltaTime) {
 
     // Rotation and Side Thrust
     let rotationAmount = 0;
-    const SIDE_THRUST_POWER = CONFIG.THRUST_POWER * 0.4; // Side thrusters are 40% as powerful as main
+    const SIDE_THRUST_POWER = CONFIG.THRUST_POWER * 0.7; // Increased from 0.4 to 0.7 for better horizontal control
     
     if (gameState.controls.rotateLeft && gameState.lander.fuel > 0) {
         rotationAmount = -CONFIG.ROTATION_SPEED * dt;
@@ -499,6 +499,10 @@ function updatePhysics(deltaTime) {
     gameState.lander.vy += currentGravity * dt;
     const wind = (Math.random() - 0.48) * difficulty.windFactor * dt;
     gameState.lander.vx += wind;
+
+    // Add air resistance to horizontal movement
+    const airResistance = 0.995; // Slight air resistance to make movement more controlled
+    gameState.lander.vx *= airResistance;
 
     // Fuel Leak
     if (gameState.lander.fuelLeaking && gameState.lander.fuel > 0) {
